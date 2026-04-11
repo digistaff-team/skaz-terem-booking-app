@@ -272,24 +272,18 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect }: {
   const [isChecking, setIsChecking] = useState(false);
 
   const handleStartSelect = async (t: string) => {
-    console.log("[handleStartSelect] Clicked time:", t);
-    console.log("[handleStartSelect] roomId:", roomId, "date:", date);
     setStartTime(t);
     setIsChecking(true);
     setAvailableEndSlots([]);
     const endSlots = TIME_SLOTS.filter((s) => s > t);
-    console.log("[handleStartSelect] End slots to check:", endSlots);
     try {
       const available = await Promise.all(
         endSlots.map(async (end) => {
-          console.log(`[handleStartSelect] Checking ${t}-${end}...`);
           const isAvail = await isTimeSlotAvailable(roomId, date, t, end);
-          console.log(`[handleStartSelect] ${t}-${end} is ${isAvail ? "available" : "unavailable"}`);
           return isAvail ? end : null;
         })
       );
       const filtered = available.filter(Boolean) as string[];
-      console.log("[handleStartSelect] Available end slots:", filtered);
       setAvailableEndSlots(filtered);
     } catch (err) {
       console.error("[handleStartSelect] Error:", err);
