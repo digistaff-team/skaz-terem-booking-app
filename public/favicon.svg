@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#87CEEB"/>
+      <stop offset="100%" stop-color="#E0F0FF"/>
+    </linearGradient>
+    <linearGradient id="roof" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#C0392B"/>
+      <stop offset="100%" stop-color="#962D22"/>
+    </linearGradient>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F5CBA7"/>
+      <stop offset="100%" stop-color="#E8B88A"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Sky background -->
+  <rect width="64" height="64" rx="12" fill="url(#sky)"/>
+  
+  <!-- House walls -->
+  <rect x="16" y="30" width="32" height="22" rx="2" fill="url(#wall)"/>
+  
+  <!-- Roof -->
+  <polygon points="10,32 32,14 54,32" fill="url(#roof)" stroke="#7B241C" stroke-width="1"/>
+  
+  <!-- Door -->
+  <rect x="28" y="40" width="8" height="12" rx="1" fill="#8B6914"/>
+  <circle cx="34" cy="46" r="1" fill="#F5CBA7"/>
+  
+  <!-- Left window -->
+  <rect x="19" y="34" width="6" height="6" rx="1" fill="#85C1E9" stroke="#8B6914" stroke-width="0.5"/>
+  <line x1="22" y1="34" x2="22" y2="40" stroke="#8B6914" stroke-width="0.5"/>
+  <line x1="19" y1="37" x2="25" y2="37" stroke="#8B6914" stroke-width="0.5"/>
+  
+  <!-- Right window -->
+  <rect x="39" y="34" width="6" height="6" rx="1" fill="#85C1E9" stroke="#8B6914" stroke-width="0.5"/>
+  <line x1="42" y1="34" x2="42" y2="40" stroke="#8B6914" stroke-width="0.5"/>
+  <line x1="39" y1="37" x2="45" y2="37" stroke="#8B6914" stroke-width="0.5"/>
+  
+  <!-- Chimney -->
+  <rect x="42" y="16" width="5" height="10" rx="1" fill="#A04000"/>
+</svg>
