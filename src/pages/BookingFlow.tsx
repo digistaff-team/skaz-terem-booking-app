@@ -44,9 +44,10 @@ const BookingFlow = () => {
     setStep("time");
   };
 
-  const handleTimeSelect = (startTime: string, endTime: string) => {
+  const handleTimeSelect = async (startTime: string, endTime: string) => {
     if (!selectedRoom || !formData.date) return;
-    if (!isTimeSlotAvailable(selectedRoom.id, formData.date, startTime, endTime)) {
+    const available = await isTimeSlotAvailable(selectedRoom.id, formData.date, startTime, endTime);
+    if (!available) {
       toast.error("Это время уже занято, выберите другое");
       return;
     }
@@ -59,22 +60,26 @@ const BookingFlow = () => {
     setStep("confirm");
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!selectedRoom || !formData.date || !formData.startTime || !formData.endTime || !formData.title || !formData.userName) return;
 
-    addBooking({
-      roomId: selectedRoom.id,
-      roomName: selectedRoom.name,
-      date: formData.date,
-      startTime: formData.startTime,
-      endTime: formData.endTime,
-      title: formData.title,
-      description: formData.description || "",
-      userName: formData.userName,
-    });
+    try {
+      await addBooking({
+        roomId: selectedRoom.id,
+        roomName: selectedRoom.name,
+        date: formData.date,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+        title: formData.title,
+        description: formData.description || "",
+        userName: formData.userName,
+      });
 
-    toast.success("Помещение успешно забронировано!");
-    navigate("/bookings");
+      toast.success("Помещение успешно забронировано!");
+      navigate("/bookings");
+    } catch (err: any) {
+      toast.error("Ошибка при бронировании: " + err.message);
+    }
   };
 
   const goBack = () => {
@@ -96,13 +101,10 @@ const BookingFlow = () => {
   return (
     <div className="min-h-screen warm-glow">
       <div className="mx-auto max-w-2xl px-4 py-8">
-        {/* Header */}
         <div className="mb-8">
           <button onClick={goBack} className="mb-4 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="h-4 w-4" /> Назад
           </button>
-
-          {/* Progress */}
           <div className="flex items-center gap-2 mb-6">
             {["room", "date", "time", "details", "confirm"].map((s, i) => (
               <div key={s} className="flex items-center gap-2">
@@ -116,7 +118,6 @@ const BookingFlow = () => {
           </div>
         </div>
 
-        {/* Step: Room */}
         {step === "room" && (
           <div>
             <h2 className="mb-1 text-2xl font-bold text-foreground">Выберите помещение</h2>
@@ -140,14 +141,12 @@ const BookingFlow = () => {
           </div>
         )}
 
-        {/* Step: Date */}
         {step === "date" && (
           <div>
             <h2 className="mb-1 text-2xl font-bold text-foreground">
               <CalendarDays className="inline h-6 w-6 mr-2" />Выберите дату
             </h2>
             <p className="mb-6 text-muted-foreground">{selectedRoom?.name}</p>
-
             <div className="grid grid-cols-2 gap-3 mb-6">
               {[
                 { label: "Сегодня", offset: 0 },
@@ -171,7 +170,6 @@ const BookingFlow = () => {
                 );
               })}
             </div>
-
             <div>
               <Label htmlFor="custom-date" className="text-sm text-muted-foreground">
                 Или выберите другую дату
@@ -188,7 +186,6 @@ const BookingFlow = () => {
           </div>
         )}
 
-        {/* Step: Time */}
         {step === "time" && <TimeStep
           date={formData.date!}
           roomId={selectedRoom!.id}
@@ -197,16 +194,13 @@ const BookingFlow = () => {
           onSelect={handleTimeSelect}
         />}
 
-        {/* Step: Details */}
         {step === "details" && <DetailsStep onSubmit={handleDetailsSubmit} />}
 
-        {/* Step: Confirm */}
         {step === "confirm" && selectedRoom && (
           <div>
             <h2 className="mb-6 text-2xl font-bold text-foreground">
               <Check className="inline h-6 w-6 mr-2" />Подтвердите бронирование
             </h2>
-
             <div className="rounded-xl border border-border bg-card p-6 space-y-4 mb-6">
               <div className="flex items-center gap-3">
                 <Home className="h-5 w-5 text-primary" />
@@ -239,7 +233,6 @@ const BookingFlow = () => {
                 <p className="font-semibold text-foreground">{formData.userName}</p>
               </div>
             </div>
-
             <Button onClick={handleConfirm} className="w-full" size="lg">
               Подтвердить бронирование
             </Button>
@@ -258,10 +251,18 @@ function TimeStep({ date, roomId, roomName, formatDate, onSelect }: {
   onSelect: (start: string, end: string) => void;
 }) {
   const [startTime, setStartTime] = useState<string | null>(null);
+  const [availableEndSlots, setAvailableEndSlots] = useState<string[]>([]);
 
-  const endSlots = startTime
-    ? TIME_SLOTS.filter((t) => t > startTime && isTimeSlotAvailable(roomId, date, startTime, t))
-    : [];
+  const handleStartSelect = async (t: string) => {
+    setStartTime(t);
+    const slots: string[] = [];
+    for (const end of TIME_SLOTS.filter((s) => s > t)) {
+      const available = await isTimeSlotAvailable(roomId, date, t, end);
+      if (available) slots.push(end);
+      else break;
+    }
+    setAvailableEndSlots(slots);
+  };
 
   return (
     <div>
@@ -276,7 +277,7 @@ function TimeStep({ date, roomId, roomName, formatDate, onSelect }: {
           {TIME_SLOTS.map((t) => (
             <button
               key={t}
-              onClick={() => setStartTime(t)}
+              onClick={() => handleStartSelect(t)}
               className="rounded-lg border border-border bg-card px-3 py-3 text-center font-medium text-foreground transition-all hover:border-primary/50 hover:bg-primary/5"
             >
               {t}
@@ -287,10 +288,10 @@ function TimeStep({ date, roomId, roomName, formatDate, onSelect }: {
         <div>
           <p className="mb-4 text-sm text-muted-foreground">
             Начало: <span className="font-semibold text-foreground">{startTime}</span>
-            <button onClick={() => setStartTime(null)} className="ml-2 text-primary hover:underline">изменить</button>
+            <button onClick={() => { setStartTime(null); setAvailableEndSlots([]); }} className="ml-2 text-primary hover:underline">изменить</button>
           </p>
           <div className="grid grid-cols-3 gap-2">
-            {endSlots.map((t) => (
+            {availableEndSlots.map((t) => (
               <button
                 key={t}
                 onClick={() => onSelect(startTime, t)}
@@ -300,7 +301,7 @@ function TimeStep({ date, roomId, roomName, formatDate, onSelect }: {
               </button>
             ))}
           </div>
-          {endSlots.length === 0 && (
+          {availableEndSlots.length === 0 && (
             <p className="text-sm text-muted-foreground">Нет доступных слотов после {startTime}</p>
           )}
         </div>
