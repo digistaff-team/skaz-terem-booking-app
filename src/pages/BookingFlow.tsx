@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { rooms } from "@/data/rooms";
 import { Room, BookingFormData } from "@/types/booking";
 import { addBooking, isTimeSlotAvailable } from "@/lib/bookingStore";
@@ -18,9 +18,23 @@ const TIME_SLOTS = Array.from({ length: 15 }, (_, i) => {
 
 const BookingFlow = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [step, setStep] = useState<Step>("room");
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [formData, setFormData] = useState<Partial<BookingFormData>>({});
+
+  // Проверяем, есть ли room в URL — сразу переходим к выбору даты
+  useEffect(() => {
+    const roomId = searchParams.get("room");
+    if (roomId) {
+      const room = rooms.find((r) => r.id === roomId);
+      if (room) {
+        setSelectedRoom(room);
+        setFormData((p) => ({ ...p, roomId: room.id }));
+        setStep("date");
+      }
+    }
+  }, []);
 
   const handleRoomSelect = (room: Room) => {
     setSelectedRoom(room);
@@ -146,7 +160,8 @@ const BookingFlow = () => {
             <h2 className="mb-1 text-2xl font-bold text-foreground">
               <CalendarDays className="inline h-6 w-6 mr-2" />Выберите дату
             </h2>
-            <p className="mb-6 text-muted-foreground">{selectedRoom?.name}</p>
+            <p className="mb-2 text-lg font-semibold text-primary">{selectedRoom?.icon} {selectedRoom?.name}</p>
+            <p className="mb-6 text-muted-foreground">Когда вам нужно помещение?</p>
             <div className="grid grid-cols-2 gap-3 mb-6">
               {[
                 { label: "Сегодня", offset: 0 },
@@ -190,6 +205,7 @@ const BookingFlow = () => {
           date={formData.date!}
           roomId={selectedRoom!.id}
           roomName={selectedRoom!.name}
+          roomIcon={selectedRoom!.icon}
           formatDate={formatDate}
           onSelect={handleTimeSelect}
         />}
@@ -243,10 +259,11 @@ const BookingFlow = () => {
   );
 };
 
-function TimeStep({ date, roomId, roomName, formatDate, onSelect }: {
+function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect }: {
   date: string;
   roomId: string;
   roomName: string;
+  roomIcon: string;
   formatDate: (d: string) => string;
   onSelect: (start: string, end: string) => void;
 }) {
@@ -270,7 +287,8 @@ function TimeStep({ date, roomId, roomName, formatDate, onSelect }: {
         <Clock className="inline h-6 w-6 mr-2" />
         {startTime ? "Время окончания" : "Время начала"}
       </h2>
-      <p className="mb-6 text-muted-foreground">{roomName} · {formatDate(date)}</p>
+      <p className="mb-2 text-lg font-semibold text-primary">{roomIcon} {roomName}</p>
+      <p className="mb-6 text-muted-foreground">{formatDate(date)}</p>
 
       {!startTime ? (
         <div className="grid grid-cols-3 gap-2">
