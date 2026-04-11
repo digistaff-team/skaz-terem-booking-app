@@ -8,6 +8,7 @@ import { ArrowLeft, CalendarDays, Clock, Home, Trash2 } from "lucide-react";
 
 const MyBookings = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const loadBookings = async () => {
     const data = await getActiveBookings();
@@ -19,9 +20,17 @@ const MyBookings = () => {
   }, []);
 
   const handleCancel = async (id: string) => {
-    await cancelBooking(id);
-    await loadBookings();
-    toast.success("Бронирование отменено");
+    setCancellingId(id);
+    toast.info("Удаляю ваше бронирование...");
+    try {
+      await cancelBooking(id);
+      await loadBookings();
+      toast.success("Бронирование отменено");
+    } catch (err: any) {
+      toast.error("Ошибка при отмене: " + err.message);
+    } finally {
+      setCancellingId(null);
+    }
   };
 
   const formatDate = (d: string) =>
@@ -50,12 +59,24 @@ const MyBookings = () => {
         ) : (
           <div className="space-y-4">
             {bookings.map((b) => (
-              <div key={b.id} className="rounded-xl border border-border bg-card p-5">
+              <div
+                key={b.id}
+                className={`rounded-xl border border-border bg-card p-5 transition-all duration-300 ${
+                  cancellingId === b.id
+                    ? "opacity-40 pointer-events-none blur-[1px]"
+                    : ""
+                }`}
+              >
                 <div className="flex items-start justify-between mb-3">
                   <h3 className="font-semibold text-foreground text-lg">{b.title}</h3>
                   <button
                     onClick={() => handleCancel(b.id)}
-                    className="text-muted-foreground hover:text-destructive transition-colors p-1"
+                    disabled={cancellingId !== null}
+                    className={`transition-colors p-1 ${
+                      cancellingId === b.id
+                        ? "text-muted-foreground cursor-not-allowed"
+                        : "text-muted-foreground hover:text-destructive"
+                    }`}
                     title="Отменить"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -73,6 +94,11 @@ const MyBookings = () => {
                   </div>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">Ответственный: {b.userName}</p>
+                {cancellingId === b.id && (
+                  <p className="mt-3 text-sm text-muted-foreground animate-pulse">
+                    ⏳ Удаляю ваше бронирование...
+                  </p>
+                )}
               </div>
             ))}
           </div>
