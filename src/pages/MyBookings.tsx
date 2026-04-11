@@ -9,13 +9,18 @@ import { ArrowLeft, CalendarDays, Clock, Home, Trash2 } from "lucide-react";
 const MyBookings = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
 
+  const loadBookings = async () => {
+    const data = await getActiveBookings();
+    setBookings(data);
+  };
+
   useEffect(() => {
-    setBookings(getActiveBookings());
+    loadBookings();
   }, []);
 
-  const handleCancel = (id: string) => {
-    cancelBooking(id);
-    setBookings(getActiveBookings());
+  const handleCancel = async (id: string) => {
+    await cancelBooking(id);
+    await loadBookings();
     toast.success("Бронирование отменено");
   };
 
