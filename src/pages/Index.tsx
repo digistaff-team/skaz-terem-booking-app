@@ -36,10 +36,10 @@ const Index = () => {
         {/* Welcome */}
         <div className="mb-10 text-center">
           <h2 className="mb-3 text-3xl font-bold text-foreground sm:text-4xl">
-            Забронируйте пространство
+            Забронируйте и приходите
           </h2>
           <p className="mx-auto max-w-lg text-muted-foreground">
-            Уютный коворкинг для работы, встреч, мастер-классов и праздников. Выберите помещение и забронируйте в пару кликов.
+            Уютное место для работы, встреч, мастер-классов и праздников. Выберите помещение и забронируйте заранее.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Link to="/book">
