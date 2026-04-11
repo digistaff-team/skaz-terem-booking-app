@@ -269,11 +269,14 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect }: {
 }) {
   const [startTime, setStartTime] = useState<string | null>(null);
   const [availableEndSlots, setAvailableEndSlots] = useState<string[]>([]);
+  const [isChecking, setIsChecking] = useState(false);
 
   const handleStartSelect = async (t: string) => {
     console.log("[handleStartSelect] Clicked time:", t);
     console.log("[handleStartSelect] roomId:", roomId, "date:", date);
     setStartTime(t);
+    setIsChecking(true);
+    setAvailableEndSlots([]);
     const endSlots = TIME_SLOTS.filter((s) => s > t);
     console.log("[handleStartSelect] End slots to check:", endSlots);
     try {
@@ -290,6 +293,8 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect }: {
       setAvailableEndSlots(filtered);
     } catch (err) {
       console.error("[handleStartSelect] Error:", err);
+    } finally {
+      setIsChecking(false);
     }
   };
 
@@ -331,9 +336,13 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect }: {
               </button>
             ))}
           </div>
-          {availableEndSlots.length === 0 && (
+          {isChecking ? (
+            <p className="text-sm text-muted-foreground animate-pulse">
+              ⏳ Проверяю, свободно ли помещение в это время...
+            </p>
+          ) : availableEndSlots.length === 0 ? (
             <p className="text-sm text-muted-foreground">Нет доступных слотов после {startTime}</p>
-          )}
+          ) : null}
         </div>
       )}
     </div>
