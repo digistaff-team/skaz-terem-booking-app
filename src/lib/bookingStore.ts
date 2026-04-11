@@ -93,9 +93,22 @@ export async function isTimeSlotAvailable(
   endTime: string,
   excludeId?: string
 ): Promise<boolean> {
+  // Сначала проверим все бронирования на эту дату для отладки
+  const { data: allBookings, error: allError } = await supabase
+    .from("bookings")
+    .select("id, room_id, date, start_time, end_time, status")
+    .eq("room_id", roomId)
+    .eq("date", date);
+
+  if (allError) {
+    console.error("[isTimeSlotAvailable] Error fetching all bookings:", allError);
+  } else {
+    console.log(`[isTimeSlotAvailable] All bookings for room ${roomId} on ${date}:`, allBookings);
+  }
+
   let query = supabase
     .from("bookings")
-    .select("id")
+    .select("id, start_time, end_time, status")
     .eq("room_id", roomId)
     .eq("date", date)
     .eq("status", "active")
@@ -107,10 +120,13 @@ export async function isTimeSlotAvailable(
   }
 
   const { data, error } = await query;
+  
   if (error) {
-    console.error("Error checking availability:", error);
+    console.error("[isTimeSlotAvailable] Supabase error:", error);
     return false;
   }
+
+  console.log(`[isTimeSlotAvailable] Checking ${startTime}-${endTime}, conflicts:`, data);
 
   return (data ?? []).length === 0;
 }

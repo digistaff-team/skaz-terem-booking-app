@@ -272,13 +272,14 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect }: {
 
   const handleStartSelect = async (t: string) => {
     setStartTime(t);
-    const slots: string[] = [];
-    for (const end of TIME_SLOTS.filter((s) => s > t)) {
-      const available = await isTimeSlotAvailable(roomId, date, t, end);
-      if (available) slots.push(end);
-      else break;
-    }
-    setAvailableEndSlots(slots);
+    const endSlots = TIME_SLOTS.filter((s) => s > t);
+    const available = await Promise.all(
+      endSlots.map(async (end) => {
+        const isAvail = await isTimeSlotAvailable(roomId, date, t, end);
+        return isAvail ? end : null;
+      })
+    );
+    setAvailableEndSlots(available.filter(Boolean) as string[]);
   };
 
   return (
