@@ -1,5 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Booking } from "@/types/booking";
+import {
+  syncBookingToGoogleCalendar,
+  cancelBookingInGoogleCalendar,
+} from "./googleCalendar";
 
 export async function getBookings(): Promise<Booking[]> {
   const { data, error } = await supabase
@@ -52,16 +56,34 @@ export async function addBooking(
     .single();
 
   if (error) throw new Error(error.message);
-  return mapRow(data);
+  
+  const newBooking = mapRow(data);
+  
+  // Sync to Google Calendar
+  await syncBookingToGoogleCalendar(newBooking);
+  
+  return newBooking;
 }
 
 export async function cancelBooking(id: string): Promise<void> {
+  // Get booking data before cancelling
+  const { data: bookingData } = await supabase
+    .from("bookings")
+    .select("*")
+    .eq("id", id)
+    .single();
+
   const { error } = await supabase
     .from("bookings")
     .update({ status: "cancelled" })
     .eq("id", id);
 
   if (error) throw new Error(error.message);
+
+  // Remove from Google Calendar
+  if (bookingData) {
+    await cancelBookingInGoogleCalendar(id, bookingData.room_id);
+  }
 }
 
 export async function isTimeSlotAvailable(
