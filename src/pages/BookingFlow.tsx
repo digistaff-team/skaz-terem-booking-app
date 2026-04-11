@@ -22,6 +22,7 @@ const BookingFlow = () => {
   const [step, setStep] = useState<Step>("room");
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [formData, setFormData] = useState<Partial<BookingFormData>>({});
+  const [isBooking, setIsBooking] = useState(false);
 
   // Проверяем, есть ли room в URL — сразу переходим к выбору даты
   useEffect(() => {
@@ -76,6 +77,9 @@ const BookingFlow = () => {
 
   const handleConfirm = async () => {
     if (!selectedRoom || !formData.date || !formData.startTime || !formData.endTime || !formData.title || !formData.userName) return;
+    if (isBooking) return;
+
+    setIsBooking(true);
 
     try {
       await addBooking({
@@ -93,6 +97,7 @@ const BookingFlow = () => {
       navigate("/bookings");
     } catch (err: any) {
       toast.error("Ошибка при бронировании: " + err.message);
+      setIsBooking(false);
     }
   };
 
@@ -249,8 +254,19 @@ const BookingFlow = () => {
                 <p className="font-semibold text-foreground">{formData.userName}</p>
               </div>
             </div>
-            <Button onClick={handleConfirm} className="w-full" size="lg">
-              Подтвердить бронирование
+            <Button
+              onClick={handleConfirm}
+              className="w-full"
+              size="lg"
+              disabled={isBooking}
+            >
+              {isBooking ? (
+                <span className="animate-pulse">
+                  Бронирую {selectedRoom.name}...
+                </span>
+              ) : (
+                "Подтвердить бронирование"
+              )}
             </Button>
           </div>
         )}
