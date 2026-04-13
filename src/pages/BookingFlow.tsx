@@ -196,6 +196,19 @@ const BookingFlow = () => {
             </h2>
             <p className="mb-2 text-lg font-semibold text-primary">{selectedRoom?.icon} {selectedRoom?.name}</p>
             <p className="mb-6 text-muted-foreground">Когда вам нужно помещение?</p>
+            <button
+              onClick={handleNowSelect}
+              disabled={isCheckingNow}
+              className="mb-4 w-full flex items-center gap-3 rounded-xl border-2 border-primary/30 bg-primary/5 p-4 text-left transition-all hover:shadow-md hover:border-primary/50"
+            >
+              <Zap className="h-5 w-5 text-primary shrink-0" />
+              <div className="flex-1">
+                <p className="font-semibold text-foreground">
+                  {isCheckingNow ? "Проверяю..." : "Сейчас"}
+                </p>
+                <p className="text-sm text-muted-foreground">Моментальное бронирование</p>
+              </div>
+            </button>
             <div className="grid grid-cols-2 gap-3 mb-6">
               {[
                 { label: "Сегодня", offset: 0 },
