@@ -224,41 +224,69 @@ const BookingFlow = () => {
             </h2>
             <p className="mb-2 text-lg font-semibold text-primary">{selectedRoom?.icon} {selectedRoom?.name}</p>
             <p className="mb-6 text-muted-foreground">Когда вам нужно помещение?</p>
-            <button
-              onClick={handleNowSelect}
-              disabled={isCheckingNow}
-              className="mb-4 w-full flex items-center gap-3 rounded-xl border-2 border-primary/30 bg-primary/5 p-4 text-left transition-all hover:shadow-md hover:border-primary/50"
-            >
-              <Zap className="h-5 w-5 text-primary shrink-0" />
-              <div className="flex-1">
-                <p className="font-semibold text-foreground">
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              {/* Сейчас */}
+              <button
+                onClick={handleNowSelect}
+                disabled={isCheckingNow}
+                className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4 text-left transition-all hover:shadow-md hover:border-primary/50 disabled:opacity-60"
+              >
+                <p className="font-semibold text-foreground flex items-center gap-1.5">
+                  <Zap className="h-4 w-4 text-primary" />
                   {isCheckingNow ? "Проверяю..." : "Сейчас"}
                 </p>
-                <p className="text-sm text-muted-foreground">Моментальное бронирование</p>
-              </div>
-            </button>
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              {[
-                { label: "Сегодня", offset: 0 },
-                { label: "Завтра", offset: 1 },
-                { label: "Послезавтра", offset: 2 },
-              ].map(({ label, offset }) => {
+                <p className="text-sm text-muted-foreground">Моментальная бронь</p>
+              </button>
+              {/* Сегодня */}
+              {(() => {
                 const d = new Date();
-                d.setDate(d.getDate() + offset);
                 const dateStr = d.toISOString().split("T")[0];
                 return (
                   <button
-                    key={label}
                     onClick={() => handleDateSelect(dateStr)}
                     className="rounded-xl border border-border bg-card p-4 text-left transition-all hover:shadow-md hover:border-primary/30"
                   >
-                    <p className="font-semibold text-foreground">{label}</p>
+                    <p className="font-semibold text-foreground">Сегодня</p>
                     <p className="text-sm text-muted-foreground">
                       {d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
                     </p>
                   </button>
                 );
-              })}
+              })()}
+              {/* Завтра */}
+              {(() => {
+                const d = new Date();
+                d.setDate(d.getDate() + 1);
+                const dateStr = d.toISOString().split("T")[0];
+                return (
+                  <button
+                    onClick={() => handleDateSelect(dateStr)}
+                    className="rounded-xl border border-border bg-card p-4 text-left transition-all hover:shadow-md hover:border-primary/30"
+                  >
+                    <p className="font-semibold text-foreground">Завтра</p>
+                    <p className="text-sm text-muted-foreground">
+                      {d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
+                    </p>
+                  </button>
+                );
+              })()}
+              {/* Послезавтра */}
+              {(() => {
+                const d = new Date();
+                d.setDate(d.getDate() + 2);
+                const dateStr = d.toISOString().split("T")[0];
+                return (
+                  <button
+                    onClick={() => handleDateSelect(dateStr)}
+                    className="rounded-xl border border-border bg-card p-4 text-left transition-all hover:shadow-md hover:border-primary/30"
+                  >
+                    <p className="font-semibold text-foreground">Послезавтра</p>
+                    <p className="text-sm text-muted-foreground">
+                      {d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
+                    </p>
+                  </button>
+                );
+              })()}
             </div>
             <div>
               <Label htmlFor="custom-date" className="text-sm text-muted-foreground">
