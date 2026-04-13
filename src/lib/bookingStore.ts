@@ -86,6 +86,32 @@ export async function cancelBooking(id: string): Promise<void> {
   }
 }
 
+export async function getCurrentBooking(
+  roomId: string
+): Promise<{ userName: string; title: string; endTime: string } | null> {
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
+  const currentTime = now.toTimeString().slice(0, 5);
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("user_name, title, end_time")
+    .eq("room_id", roomId)
+    .eq("date", today)
+    .eq("status", "active")
+    .lte("start_time", currentTime)
+    .gt("end_time", currentTime)
+    .limit(1);
+
+  if (error || !data || data.length === 0) return null;
+
+  return {
+    userName: data[0].user_name,
+    title: data[0].title,
+    endTime: data[0].end_time,
+  };
+}
+
 export async function isTimeSlotAvailable(
   roomId: string,
   date: string,

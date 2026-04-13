@@ -2,12 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { rooms } from "@/data/rooms";
 import { Room, BookingFormData } from "@/types/booking";
-import { addBooking, isTimeSlotAvailable } from "@/lib/bookingStore";
+import { addBooking, isTimeSlotAvailable, getCurrentBooking } from "@/lib/bookingStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ArrowLeft, CalendarDays, Clock, Home, Check } from "lucide-react";
+import { ArrowLeft, CalendarDays, Clock, Home, Check, Zap } from "lucide-react";
 
 type Step = "room" | "date" | "time" | "details" | "confirm";
 
