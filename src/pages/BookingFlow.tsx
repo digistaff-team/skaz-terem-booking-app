@@ -89,25 +89,25 @@ const BookingFlow = () => {
       }
 
       const startTime = `${startHour.toString().padStart(2, "0")}:00`;
-      const endTime = "22:00";
 
-      // Проверяем доступность
-      const conflicts = await getConflictingBookings(selectedRoom.id, today, startTime, endTime);
+      // Проверяем, свободно ли хотя бы на 1 час
+      const oneHourEnd = `${(startHour + 1).toString().padStart(2, "0")}:00`;
+      const isFree = await isTimeSlotAvailable(selectedRoom.id, today, startTime, oneHourEnd);
 
-      if (conflicts.length > 0) {
+      if (!isFree) {
+        // Занято — показываем конфликты
+        const conflicts = await getConflictingBookings(selectedRoom.id, today, startTime, "22:00");
         setConflictingBookings(conflicts);
-        setConflictTime({ start: startTime, end: endTime });
+        setConflictTime({ start: startTime, end: "22:00" });
         setShowConflictDialog(true);
       } else {
-        // Свободно — автозаполняем и переходим к деталям
+        // Свободно — переходим к выбору времени окончания
         setFormData((p) => ({
           ...p,
           date: today,
           startTime,
-          endTime,
         }));
-        toast.success(`${selectedRoom.name} свободно с ${startTime} до ${endTime}`);
-        setStep("details");
+        setStep("time");
       }
     } catch (err: any) {
       toast.error("Ошибка при проверке: " + err.message);
@@ -283,6 +283,7 @@ const BookingFlow = () => {
           roomIcon={selectedRoom!.icon}
           formatDate={formatDate}
           onSelect={handleTimeSelect}
+          initialStartTime={formData.startTime || null}
         />}
 
         {step === "details" && <DetailsStep onSubmit={handleDetailsSubmit} />}
@@ -386,17 +387,50 @@ const BookingFlow = () => {
   );
 };
 
-function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect }: {
+function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, initialStartTime }: {
   date: string;
   roomId: string;
   roomName: string;
   roomIcon: string;
   formatDate: (d: string) => string;
   onSelect: (start: string, end: string) => void;
+  initialStartTime?: string | null;
 }) {
-  const [startTime, setStartTime] = useState<string | null>(null);
+  const [startTime, setStartTime] = useState<string | null>(initialStartTime || null);
   const [availableEndSlots, setAvailableEndSlots] = useState<string[]>([]);
   const [isChecking, setIsChecking] = useState(false);
+
+  // Если startTime уже задан (режим "Сейчас"), сразу проверяем слоты окончания
+  useEffect(() => {
+    if (initialStartTime && !startTime) {
+      setStartTime(initialStartTime);
+    }
+  }, [initialStartTime]);
+
+  useEffect(() => {
+    if (startTime) {
+      const checkEndSlots = async () => {
+        setIsChecking(true);
+        setAvailableEndSlots([]);
+        const endSlots = TIME_SLOTS.filter((s) => s > startTime);
+        try {
+          const available = await Promise.all(
+            endSlots.map(async (end) => {
+              const isAvail = await isTimeSlotAvailable(roomId, date, startTime, end);
+              return isAvail ? end : null;
+            })
+          );
+          const filtered = available.filter(Boolean) as string[];
+          setAvailableEndSlots(filtered);
+        } catch (err) {
+          console.error("[TimeSlot check] Error:", err);
+        } finally {
+          setIsChecking(false);
+        }
+      };
+      checkEndSlots();
+    }
+  }, [startTime, date, roomId]);
 
   const handleStartSelect = async (t: string) => {
     setStartTime(t);
