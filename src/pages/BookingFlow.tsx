@@ -23,6 +23,7 @@ const BookingFlow = () => {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [formData, setFormData] = useState<Partial<BookingFormData>>({});
   const [isBooking, setIsBooking] = useState(false);
+  const [isCheckingNow, setIsCheckingNow] = useState(false);
 
   // Проверяем, есть ли room в URL — сразу переходим к выбору даты
   useEffect(() => {
@@ -57,6 +58,34 @@ const BookingFlow = () => {
     }
     setFormData((p) => ({ ...p, date }));
     setStep("time");
+  };
+
+  const handleNowSelect = async () => {
+    if (!selectedRoom) return;
+    setIsCheckingNow(true);
+    try {
+      const current = await getCurrentBooking(selectedRoom.id);
+      if (current) {
+        toast.error(
+          `Помещение занято до ${current.endTime}. ${current.userName} — «${current.title}»`,
+          { duration: 6000 }
+        );
+      } else {
+        const now = new Date();
+        const today = now.toISOString().split("T")[0];
+        const currentHour = now.getHours();
+        const startTime = `${currentHour.toString().padStart(2, "0")}:00`;
+        const endHour = Math.min(currentHour + 1, 22);
+        const endTime = `${endHour.toString().padStart(2, "0")}:00`;
+        setFormData((p) => ({ ...p, date: today, startTime, endTime }));
+        setStep("details");
+      }
+    } catch (err) {
+      toast.error("Ошибка при проверке доступности");
+    } finally {
+      setIsCheckingNow(false);
+    }
+  };
   };
 
   const handleTimeSelect = async (startTime: string, endTime: string) => {
