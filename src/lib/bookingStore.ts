@@ -119,9 +119,20 @@ export async function isTimeSlotAvailable(
   endTime: string,
   excludeId?: string
 ): Promise<boolean> {
+  const conflicts = await getConflictingBookings(roomId, date, startTime, endTime, excludeId);
+  return conflicts.length === 0;
+}
+
+export async function getConflictingBookings(
+  roomId: string,
+  date: string,
+  startTime: string,
+  endTime: string,
+  excludeId?: string
+): Promise<Booking[]> {
   let query = supabase
     .from("bookings")
-    .select("id")
+    .select("id, room_id, room_name, date, start_time, end_time, title, description, user_name, status")
     .eq("room_id", roomId)
     .eq("date", date)
     .eq("status", "active")
@@ -135,11 +146,11 @@ export async function isTimeSlotAvailable(
   const { data, error } = await query;
 
   if (error) {
-    console.error("[isTimeSlotAvailable] Supabase error:", error);
-    return false;
+    console.error("[getConflictingBookings] Supabase error:", error);
+    return [];
   }
 
-  return (data ?? []).length === 0;
+  return (data ?? []).map(mapRow);
 }
 
 function mapRow(row: any): Booking {

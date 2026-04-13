@@ -1,11 +1,17 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { rooms } from "@/data/rooms";
-import { Room, BookingFormData } from "@/types/booking";
-import { addBooking, isTimeSlotAvailable, getCurrentBooking } from "@/lib/bookingStore";
+import { Room, BookingFormData, Booking } from "@/types/booking";
+import { addBooking, isTimeSlotAvailable, getConflictingBookings } from "@/lib/bookingStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { ArrowLeft, CalendarDays, Clock, Home, Check, Zap } from "lucide-react";
 
@@ -23,6 +29,9 @@ const BookingFlow = () => {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [formData, setFormData] = useState<Partial<BookingFormData>>({});
   const [isBooking, setIsBooking] = useState(false);
+  const [showConflictDialog, setShowConflictDialog] = useState(false);
+  const [conflictingBookings, setConflictingBookings] = useState<Booking[]>([]);
+  const [conflictTime, setConflictTime] = useState({ start: "", end: "" });
   const [isCheckingNow, setIsCheckingNow] = useState(false);
 
   // Проверяем, есть ли room в URL — сразу переходим к выбору даты
@@ -64,28 +73,47 @@ const BookingFlow = () => {
     if (!selectedRoom) return;
     setIsCheckingNow(true);
     try {
-      const current = await getCurrentBooking(selectedRoom.id);
-      if (current) {
-        toast.error(
-          `Помещение занято до ${current.endTime}. ${current.userName} — «${current.title}»`,
-          { duration: 6000 }
-        );
+      const now = new Date();
+      const today = now.toISOString().split("T")[0];
+      const currentHour = now.getHours();
+
+      // Определяем время начала (следующий полный час)
+      let startHour: number;
+      if (currentHour < 8) {
+        startHour = 8;
+      } else if (currentHour >= 21) {
+        toast.error("Сегодня уже нельзя забронировать — осталось менее часа до закрытия");
+        return;
       } else {
-        const now = new Date();
-        const today = now.toISOString().split("T")[0];
-        const currentHour = now.getHours();
-        const startTime = `${currentHour.toString().padStart(2, "0")}:00`;
-        const endHour = Math.min(currentHour + 1, 22);
-        const endTime = `${endHour.toString().padStart(2, "0")}:00`;
-        setFormData((p) => ({ ...p, date: today, startTime, endTime }));
+        startHour = currentHour + 1;
+      }
+
+      const startTime = `${startHour.toString().padStart(2, "0")}:00`;
+      const endTime = "22:00";
+
+      // Проверяем доступность
+      const conflicts = await getConflictingBookings(selectedRoom.id, today, startTime, endTime);
+
+      if (conflicts.length > 0) {
+        setConflictingBookings(conflicts);
+        setConflictTime({ start: startTime, end: endTime });
+        setShowConflictDialog(true);
+      } else {
+        // Свободно — автозаполняем и переходим к деталям
+        setFormData((p) => ({
+          ...p,
+          date: today,
+          startTime,
+          endTime,
+        }));
+        toast.success(`${selectedRoom.name} свободно с ${startTime} до ${endTime}`);
         setStep("details");
       }
-    } catch (err) {
-      toast.error("Ошибка при проверке доступности");
+    } catch (err: any) {
+      toast.error("Ошибка при проверке: " + err.message);
     } finally {
       setIsCheckingNow(false);
     }
-  };
   };
 
   const handleTimeSelect = async (startTime: string, endTime: string) => {
@@ -313,6 +341,47 @@ const BookingFlow = () => {
           </div>
         )}
       </div>
+
+      {/* Dialog: помещение занято */}
+      <Dialog open={showConflictDialog} onOpenChange={setShowConflictDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>⛔ Помещение занято</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <p className="text-sm text-muted-foreground">
+              {selectedRoom?.icon} {selectedRoom?.name} занято с {conflictTime.start} до {conflictTime.end}:
+            </p>
+            <div className="space-y-3">
+              {conflictingBookings.map((b) => (
+                <div key={b.id} className="rounded-lg border border-border bg-muted/50 p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-foreground">
+                      {b.startTime} — {b.endTime}
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium text-foreground">{b.title}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Ответственный: {b.userName}
+                  </p>
+                  {b.description && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {b.description}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+            <Button
+              onClick={() => setShowConflictDialog(false)}
+              className="w-full"
+            >
+              Выбрать другое время
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
