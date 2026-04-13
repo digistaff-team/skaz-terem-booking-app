@@ -3,6 +3,7 @@ import { Room } from "@/types/booking";
 import { Badge } from "@/components/ui/badge";
 import { roomImages } from "@/data/roomImages";
 import ImageLightbox from "@/components/ImageLightbox";
+import RoomDetailDialog from "@/components/RoomDetailDialog";
 
 interface RoomCardProps {
   room: Room;
@@ -11,6 +12,7 @@ interface RoomCardProps {
 
 const RoomCard = ({ room, onSelect }: RoomCardProps) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const image = roomImages[room.id];
 
   return (
@@ -33,46 +35,55 @@ const RoomCard = ({ room, onSelect }: RoomCardProps) => {
           </div>
         )}
 
-        <button
-          onClick={() => onSelect(room)}
-          className="flex flex-1 flex-col p-5 text-left focus:outline-none focus:ring-2 focus:ring-ring rounded-b-xl"
-        >
-          <div className="mb-3 flex items-center justify-between">
-            <span className="text-3xl">{room.icon}</span>
-            <Badge variant="secondary" className="text-xs font-medium">
-              {room.area} м²
-            </Badge>
-          </div>
+        <div className="flex flex-1 flex-col p-5">
+          {/* Clickable text area — opens detail popup */}
+          <div
+            className="cursor-pointer flex-1"
+            onClick={() => setDialogOpen(true)}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-3xl">{room.icon}</span>
+              <Badge variant="secondary" className="text-xs font-medium">
+                {room.area} м²
+              </Badge>
+            </div>
 
-          <h3 className="mb-1 text-lg font-semibold text-foreground">{room.name}</h3>
-          <p className="mb-3 text-sm text-muted-foreground leading-relaxed">{room.description}</p>
+            <h3 className="mb-1 text-lg font-semibold text-foreground">{room.name}</h3>
+            <p className="mb-3 text-sm text-muted-foreground leading-relaxed">{room.description}</p>
 
-          <div className="mb-3 flex flex-wrap gap-1.5">
-            {room.features.slice(0, 4).map((f) => (
-              <span
-                key={f}
-                className="rounded-md bg-secondary px-2 py-0.5 text-xs text-secondary-foreground"
-              >
-                {f}
-              </span>
-            ))}
-            {room.features.length > 4 && (
-              <span className="rounded-md bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
-                +{room.features.length - 4}
-              </span>
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              {room.features.slice(0, 4).map((f) => (
+                <span
+                  key={f}
+                  className="rounded-md bg-secondary px-2 py-0.5 text-xs text-secondary-foreground"
+                >
+                  {f}
+                </span>
+              ))}
+              {room.features.length > 4 && (
+                <span className="rounded-md bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
+                  +{room.features.length - 4}
+                </span>
+              )}
+            </div>
+
+            {room.noFood && (
+              <p className="text-xs text-muted-foreground">🙏 Без еды и напитков</p>
             )}
           </div>
 
-          {room.noFood && (
-            <p className="text-xs text-muted-foreground">🙏 Без еды и напитков</p>
-          )}
-
           <div className="mt-auto pt-3">
-            <span className="text-sm font-medium text-primary group-hover:underline">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(room);
+              }}
+              className="text-sm font-medium text-primary hover:underline focus:outline-none"
+            >
               Забронировать →
-            </span>
+            </button>
           </div>
-        </button>
+        </div>
       </div>
 
       {image && (
@@ -83,6 +94,16 @@ const RoomCard = ({ room, onSelect }: RoomCardProps) => {
           onClose={() => setLightboxOpen(false)}
         />
       )}
+
+      <RoomDetailDialog
+        room={room}
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onBook={() => {
+          setDialogOpen(false);
+          onSelect(room);
+        }}
+      />
     </>
   );
 };
