@@ -3,11 +3,13 @@ import { rooms } from "@/data/rooms";
 import RoomCard from "@/components/RoomCard";
 import { useNavigate } from "react-router-dom";
 import { Room } from "@/types/booking";
-import { CalendarDays, BookOpen, ClipboardList } from "lucide-react";
+import { CalendarDays, BookOpen, ClipboardList, LogOut, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth, getUserName } from "@/lib/auth";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { user, isAuthenticated, logout } = useAuth();
 
   const handleRoomSelect = (room: Room) => {
     navigate(`/book?room=${room.id}`);
@@ -23,11 +25,24 @@ const Index = () => {
             <h1 className="text-xl font-bold text-foreground">Сказочный Терем</h1>
           </div>
           <div className="flex gap-2">
-            <Link to="/bookings">
-              <Button variant="ghost" size="sm" className="gap-1.5">
-                <ClipboardList className="h-4 w-4" /> Мои брони
-              </Button>
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link to="/bookings">
+                  <Button variant="ghost" size="sm" className="gap-1.5">
+                    <ClipboardList className="h-4 w-4" /> Мои брони
+                  </Button>
+                </Link>
+                <Button variant="ghost" size="sm" onClick={logout} className="gap-1.5 text-muted-foreground">
+                  <LogOut className="h-4 w-4" /> {getUserName(user)}
+                </Button>
+              </>
+            ) : (
+              <a href="https://t.me/SkazTerem_bot" target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <Send className="h-4 w-4" /> Войти через Telegram
+                </Button>
+              </a>
+            )}
           </div>
         </div>
       </header>

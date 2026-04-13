@@ -11,6 +11,16 @@ export interface Room {
   icon: string;
 }
 
+export interface Subscriber {
+  id: string;
+  chatId: number;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+  subscribedAt: string;
+  isActive: boolean;
+}
+
 export interface Booking {
   id: string;
   roomId: string;
@@ -21,6 +31,7 @@ export interface Booking {
   title: string;
   description: string;
   userName: string;
+  userId?: string; // subscriber.id
   status: 'active' | 'cancelled';
   createdAt: string;
 }

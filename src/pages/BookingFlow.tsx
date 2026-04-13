@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { ArrowLeft, CalendarDays, Clock, Home, Check, Zap } from "lucide-react";
+import { useAuth, getUserName } from "@/lib/auth";
 
 type Step = "room" | "date" | "time" | "details" | "confirm";
 
@@ -33,6 +34,7 @@ const BookingFlow = () => {
   const [conflictingBookings, setConflictingBookings] = useState<Booking[]>([]);
   const [conflictTime, setConflictTime] = useState({ start: "", end: "" });
   const [isCheckingNow, setIsCheckingNow] = useState(false);
+  const { user } = useAuth();
 
   // Проверяем, есть ли room в URL — сразу переходим к выбору даты
   useEffect(() => {
@@ -127,7 +129,8 @@ const BookingFlow = () => {
     setStep("details");
   };
 
-  const handleDetailsSubmit = (title: string, description: string, userName: string) => {
+  const handleDetailsSubmit = (title: string, description: string) => {
+    const userName = user ? getUserName(user) : "Гость";
     setFormData((p) => ({ ...p, title, description, userName }));
     setStep("confirm");
   };
@@ -147,8 +150,8 @@ const BookingFlow = () => {
         endTime: formData.endTime,
         title: formData.title,
         description: formData.description || "",
-        userName: formData.userName,
-      });
+        userName: formData.userName || getUserName(user),
+      }, user?.id);
 
       toast.success("Помещение успешно забронировано!");
       navigate("/bookings");
@@ -550,18 +553,17 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
   );
 }
 
-function DetailsStep({ onSubmit }: { onSubmit: (title: string, desc: string, name: string) => void }) {
+function DetailsStep({ onSubmit }: { onSubmit: (title: string, desc: string) => void }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [userName, setUserName] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !userName.trim()) {
-      toast.error("Заполните обязательные поля");
+    if (!title.trim()) {
+      toast.error("Введите название мероприятия");
       return;
     }
-    onSubmit(title.trim(), description.trim(), userName.trim());
+    onSubmit(title.trim(), description.trim());
   };
 
   return (
@@ -575,10 +577,6 @@ function DetailsStep({ onSubmit }: { onSubmit: (title: string, desc: string, nam
         <div>
           <Label htmlFor="desc">Описание</Label>
           <Input id="desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Краткое описание (необязательно)" className="mt-1.5" />
-        </div>
-        <div>
-          <Label htmlFor="name">Ваше имя (ответственный) *</Label>
-          <Input id="name" value={userName} onChange={(e) => setUserName(e.target.value)} placeholder="Имя и фамилия" className="mt-1.5" />
         </div>
         <Button type="submit" className="w-full" size="lg">Далее</Button>
       </div>

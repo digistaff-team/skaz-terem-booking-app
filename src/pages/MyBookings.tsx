@@ -1,29 +1,31 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { getActiveBookings, cancelBooking } from "@/lib/bookingStore";
+import { useAuth } from "@/lib/auth";
 import { Booking } from "@/types/booking";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ArrowLeft, CalendarDays, Clock, Home, Trash2 } from "lucide-react";
 
 const MyBookings = () => {
+  const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const loadBookings = async () => {
-    const data = await getActiveBookings();
+    const data = await getActiveBookings(user?.id);
     setBookings(data);
   };
 
   useEffect(() => {
     loadBookings();
-  }, []);
+  }, [user?.id]);
 
   const handleCancel = async (id: string) => {
     setCancellingId(id);
     toast.info("Удаляю ваше бронирование...");
     try {
-      await cancelBooking(id);
+      await cancelBooking(id, user?.id);
       await loadBookings();
       toast.success("Бронирование отменено");
     } catch (err: any) {

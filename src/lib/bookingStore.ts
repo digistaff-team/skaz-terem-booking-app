@@ -5,11 +5,17 @@ import {
   cancelBookingInGoogleCalendar,
 } from "./googleCalendar";
 
-export async function getBookings(): Promise<Booking[]> {
-  const { data, error } = await supabase
+export async function getBookings(userId?: string): Promise<Booking[]> {
+  let query = supabase
     .from("bookings")
     .select("*")
     .order("date", { ascending: true });
+
+  if (userId) {
+    query = query.eq("user_id", userId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error fetching bookings:", error);
@@ -19,14 +25,20 @@ export async function getBookings(): Promise<Booking[]> {
   return (data ?? []).map(mapRow);
 }
 
-export async function getActiveBookings(): Promise<Booking[]> {
+export async function getActiveBookings(userId?: string): Promise<Booking[]> {
   const today = new Date().toISOString().split("T")[0];
-  const { data, error } = await supabase
+  let query = supabase
     .from("bookings")
     .select("*")
     .eq("status", "active")
     .gte("date", today)
     .order("date", { ascending: true });
+
+  if (userId) {
+    query = query.eq("user_id", userId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error fetching active bookings:", error);
@@ -37,7 +49,8 @@ export async function getActiveBookings(): Promise<Booking[]> {
 }
 
 export async function addBooking(
-  booking: Omit<Booking, "id" | "createdAt" | "status">
+  booking: Omit<Booking, "id" | "createdAt" | "status">,
+  userId?: string
 ): Promise<Booking> {
   const { data, error } = await supabase
     .from("bookings")
@@ -50,28 +63,38 @@ export async function addBooking(
       title: booking.title,
       description: booking.description,
       user_name: booking.userName,
+      user_id: userId || null,
       status: "active",
     })
     .select()
     .single();
 
   if (error) throw new Error(error.message);
-  
+
   const newBooking = mapRow(data);
-  
+
   // Sync to Google Calendar
   await syncBookingToGoogleCalendar(newBooking);
-  
+
   return newBooking;
 }
 
-export async function cancelBooking(id: string): Promise<void> {
+export async function cancelBooking(id: string, userId?: string): Promise<void> {
   // Get booking data before cancelling
   const { data: bookingData } = await supabase
     .from("bookings")
     .select("*")
     .eq("id", id)
     .single();
+
+  if (!bookingData) {
+    throw new Error("Бронирование не найдено");
+  }
+
+  // Check ownership if userId provided
+  if (userId && bookingData.user_id !== userId) {
+    throw new Error("Вы можете отменить только своё бронирование");
+  }
 
   const { error } = await supabase
     .from("bookings")
@@ -164,6 +187,7 @@ function mapRow(row: any): Booking {
     title: row.title,
     description: row.description,
     userName: row.user_name,
+    userId: row.user_id,
     status: row.status,
     createdAt: row.created_at,
   };
