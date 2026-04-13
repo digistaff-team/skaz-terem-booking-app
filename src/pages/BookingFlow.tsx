@@ -492,15 +492,33 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
 
       {!startTime ? (
         <div className="grid grid-cols-3 gap-2">
-          {TIME_SLOTS.map((t) => (
-            <button
-              key={t}
-              onClick={() => handleStartSelect(t)}
-              className="rounded-lg border border-border bg-card px-3 py-3 text-center font-medium text-foreground transition-all hover:border-primary/50 hover:bg-primary/5"
-            >
-              {t}
-            </button>
-          ))}
+          {(() => {
+            // Фильтруем прошедшие слоты, если дата — сегодня
+            const today = new Date().toISOString().split("T")[0];
+            const isToday = date === today;
+            const currentHour = new Date().getHours();
+            const visibleSlots = isToday
+              ? TIME_SLOTS.filter((t) => parseInt(t) > currentHour)
+              : TIME_SLOTS;
+
+            if (visibleSlots.length === 0) {
+              return (
+                <div className="col-span-3 text-center py-6 text-muted-foreground">
+                  <p>Сегодня время уже прошло</p>
+                </div>
+              );
+            }
+
+            return visibleSlots.map((t) => (
+              <button
+                key={t}
+                onClick={() => handleStartSelect(t)}
+                className="rounded-lg border border-border bg-card px-3 py-3 text-center font-medium text-foreground transition-all hover:border-primary/50 hover:bg-primary/5"
+              >
+                {t}
+              </button>
+            ));
+          })()}
         </div>
       ) : (
         <div>
