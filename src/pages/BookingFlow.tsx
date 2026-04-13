@@ -2,12 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { rooms } from "@/data/rooms";
 import { Room, BookingFormData } from "@/types/booking";
-import { addBooking, isTimeSlotAvailable } from "@/lib/bookingStore";
+import { addBooking, isTimeSlotAvailable, getCurrentBooking } from "@/lib/bookingStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ArrowLeft, CalendarDays, Clock, Home, Check } from "lucide-react";
+import { ArrowLeft, CalendarDays, Clock, Home, Check, Zap } from "lucide-react";
 
 type Step = "room" | "date" | "time" | "details" | "confirm";
 
@@ -23,6 +23,7 @@ const BookingFlow = () => {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [formData, setFormData] = useState<Partial<BookingFormData>>({});
   const [isBooking, setIsBooking] = useState(false);
+  const [isCheckingNow, setIsCheckingNow] = useState(false);
 
   // Проверяем, есть ли room в URL — сразу переходим к выбору даты
   useEffect(() => {
@@ -57,6 +58,34 @@ const BookingFlow = () => {
     }
     setFormData((p) => ({ ...p, date }));
     setStep("time");
+  };
+
+  const handleNowSelect = async () => {
+    if (!selectedRoom) return;
+    setIsCheckingNow(true);
+    try {
+      const current = await getCurrentBooking(selectedRoom.id);
+      if (current) {
+        toast.error(
+          `Помещение занято до ${current.endTime}. ${current.userName} — «${current.title}»`,
+          { duration: 6000 }
+        );
+      } else {
+        const now = new Date();
+        const today = now.toISOString().split("T")[0];
+        const currentHour = now.getHours();
+        const startTime = `${currentHour.toString().padStart(2, "0")}:00`;
+        const endHour = Math.min(currentHour + 1, 22);
+        const endTime = `${endHour.toString().padStart(2, "0")}:00`;
+        setFormData((p) => ({ ...p, date: today, startTime, endTime }));
+        setStep("details");
+      }
+    } catch (err) {
+      toast.error("Ошибка при проверке доступности");
+    } finally {
+      setIsCheckingNow(false);
+    }
+  };
   };
 
   const handleTimeSelect = async (startTime: string, endTime: string) => {
@@ -167,6 +196,19 @@ const BookingFlow = () => {
             </h2>
             <p className="mb-2 text-lg font-semibold text-primary">{selectedRoom?.icon} {selectedRoom?.name}</p>
             <p className="mb-6 text-muted-foreground">Когда вам нужно помещение?</p>
+            <button
+              onClick={handleNowSelect}
+              disabled={isCheckingNow}
+              className="mb-4 w-full flex items-center gap-3 rounded-xl border-2 border-primary/30 bg-primary/5 p-4 text-left transition-all hover:shadow-md hover:border-primary/50"
+            >
+              <Zap className="h-5 w-5 text-primary shrink-0" />
+              <div className="flex-1">
+                <p className="font-semibold text-foreground">
+                  {isCheckingNow ? "Проверяю..." : "Сейчас"}
+                </p>
+                <p className="text-sm text-muted-foreground">Моментальное бронирование</p>
+              </div>
+            </button>
             <div className="grid grid-cols-2 gap-3 mb-6">
               {[
                 { label: "Сегодня", offset: 0 },
