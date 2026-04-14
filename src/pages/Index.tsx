@@ -3,13 +3,13 @@ import { rooms } from "@/data/rooms";
 import RoomCard from "@/components/RoomCard";
 import { useNavigate } from "react-router-dom";
 import { Room } from "@/types/booking";
-import { CalendarDays, BookOpen, ClipboardList, LogOut, Send } from "lucide-react";
+import { CalendarDays, BookOpen, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAuth, getUserName } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const handleRoomSelect = (room: Room) => {
     navigate(`/book?room=${room.id}`);
@@ -26,16 +26,11 @@ const Index = () => {
           </div>
           <div className="flex gap-2">
             {isAuthenticated ? (
-              <>
-                <Link to="/bookings">
-                  <Button variant="ghost" size="sm" className="gap-1.5">
-                    <ClipboardList className="h-4 w-4" /> Мои брони
-                  </Button>
-                </Link>
-                <Button variant="ghost" size="sm" onClick={logout} className="gap-1.5 text-muted-foreground">
-                  <LogOut className="h-4 w-4" /> {getUserName(user)}
+              <Link to="/bookings">
+                <Button variant="ghost" size="sm" className="gap-1.5">
+                  <ClipboardList className="h-4 w-4" /> Мои брони
                 </Button>
-              </>
+              </Link>
             ) : (
               <Link to="/auth">
                 <Button variant="ghost" size="sm" className="gap-1.5">
