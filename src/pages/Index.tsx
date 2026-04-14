@@ -37,11 +37,11 @@ const Index = () => {
                 </Button>
               </>
             ) : (
-              <a href="https://t.me/SkazTerem_bot" target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" size="sm" className="gap-1.5">
-                  <Send className="h-4 w-4" /> Войти через Telegram
+              <Link to="/auth">
+                <Button variant="ghost" size="sm" className="gap-1.5">
+                  <ClipboardList className="h-4 w-4" /> Мои брони
                 </Button>
-              </a>
+              </Link>
             )}
           </div>
         </div>
