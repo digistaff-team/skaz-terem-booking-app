@@ -206,7 +206,8 @@ export { getToken, setToken, clearToken, cacheUser, fetchSubscriberById, fetchSu
 
 export function getUserName(user: Subscriber | null): string {
   if (!user) return "Гость";
-  if (user.firstName) return user.firstName;
+  const parts = [user.firstName, user.lastName].filter(Boolean);
+  if (parts.length > 0) return parts.join(" ");
   if (user.username) return user.username;
   return "Пользователь";
 }
