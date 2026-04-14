@@ -161,7 +161,7 @@ export function useAuth() {
 
 // === Utility exports ===
 
-export { getToken, setToken, clearToken, fetchSubscriberById };
+export { getToken, setToken, clearToken, fetchSubscriberById, cacheUser };
 
 export function getUserName(user: Subscriber | null): string {
   if (!user) return "Гость";
