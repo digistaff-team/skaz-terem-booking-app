@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from "react";
+import { useState, useEffect, createContext, useContext, createElement, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 const AUTH_TOKEN_KEY = "auth_token";
@@ -99,20 +99,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const token = getToken();
     if (token) {
-      // Try cached user first
       const cached = getCachedUser();
       if (cached) {
         setUser(cached);
         setIsLoading(false);
       }
 
-      // Verify with Supabase
       fetchSubscriberById(token).then((subscriber) => {
         if (subscriber) {
           setUser(subscriber);
           cacheUser(subscriber);
         } else {
-          // Token invalid — clear
           clearToken();
           setUser(null);
           cacheUser(null);
@@ -140,18 +137,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
+  return createElement(
+    AuthContext.Provider,
+    {
+      value: {
         user,
         isLoading,
         isAuthenticated: !!user,
         logout,
         refreshUser,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+      },
+    },
+    children
   );
 }
 
@@ -161,7 +158,7 @@ export function useAuth() {
 
 // === Utility exports ===
 
-export { getToken, setToken, clearToken, fetchSubscriberById };
+export { getToken, setToken, clearToken, fetchSubscriberById, cacheUser };
 
 export function getUserName(user: Subscriber | null): string {
   if (!user) return "Гость";
