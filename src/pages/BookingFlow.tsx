@@ -142,13 +142,16 @@ const BookingFlow = () => {
     setIsBooking(true);
 
     try {
+      // Формируем название в формате: {помещение}|{мероприятие}|{пользователь}
+      const formattedTitle = `${selectedRoom.name}|${formData.title}|${formData.userName}`;
+
       await addBooking({
         roomId: selectedRoom.id,
         roomName: selectedRoom.name,
         date: formData.date,
         startTime: formData.startTime,
         endTime: formData.endTime,
-        title: formData.title,
+        title: formattedTitle,
         description: formData.description || "",
         userName: formData.userName || getUserName(user),
       }, user?.id);
