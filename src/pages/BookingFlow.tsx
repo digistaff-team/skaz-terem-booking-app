@@ -129,8 +129,8 @@ const BookingFlow = () => {
     setStep("details");
   };
 
-  const handleDetailsSubmit = (title: string, description: string) => {
-    const userName = user ? getUserName(user) : "Гость";
+  const handleDetailsSubmit = (title: string, description: string, name: string) => {
+    const userName = name || (user ? getUserName(user) : "Гость");
     setFormData((p) => ({ ...p, title, description, userName }));
     setStep("confirm");
   };
@@ -320,7 +320,7 @@ const BookingFlow = () => {
           initialStartTime={formData.startTime || null}
         />}
 
-        {step === "details" && <DetailsStep onSubmit={handleDetailsSubmit} />}
+        {step === "details" && <DetailsStep onSubmit={handleDetailsSubmit} userName={user ? getUserName(user) : ""} />}
 
         {step === "confirm" && selectedRoom && (
           <div>
@@ -556,9 +556,10 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
   );
 }
 
-function DetailsStep({ onSubmit }: { onSubmit: (title: string, desc: string) => void }) {
+function DetailsStep({ onSubmit, userName }: { onSubmit: (title: string, desc: string, name: string) => void; userName: string }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [name, setName] = useState(userName);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -566,12 +567,12 @@ function DetailsStep({ onSubmit }: { onSubmit: (title: string, desc: string) => 
       toast.error("Введите название мероприятия");
       return;
     }
-    onSubmit(title.trim(), description.trim());
+    onSubmit(title.trim(), description.trim(), name.trim());
   };
 
   return (
     <form onSubmit={handleSubmit}>
-      <h2 className="mb-6 text-2xl font-bold text-foreground">Детали мероприятия</h2>
+      <h2 className="mb-6 text-2xl font-bold text-foreground">Детали бронирования</h2>
       <div className="space-y-4">
         <div>
           <Label htmlFor="title">Название мероприятия *</Label>
@@ -580,6 +581,10 @@ function DetailsStep({ onSubmit }: { onSubmit: (title: string, desc: string) => 
         <div>
           <Label htmlFor="desc">Описание</Label>
           <Input id="desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Краткое описание (необязательно)" className="mt-1.5" />
+        </div>
+        <div>
+          <Label htmlFor="name">Ваше имя (ответственный)</Label>
+          <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="mt-1.5" />
         </div>
         <Button type="submit" className="w-full" size="lg">Далее</Button>
       </div>
