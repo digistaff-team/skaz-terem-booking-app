@@ -97,6 +97,27 @@ async function fetchSubscriberByChatId(chatId: number): Promise<Subscriber | nul
   };
 }
 
+async function registerSubscriber(chatId: number): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.rpc("register_subscriber", {
+      p_chat_id: chatId,
+      p_username: null,
+      p_first_name: null,
+      p_last_name: null,
+    });
+
+    if (error) {
+      console.error("Error registering subscriber:", error);
+      return null;
+    }
+
+    return data;
+  } catch (e) {
+    console.error("RPC call failed:", e);
+    return null;
+  }
+}
+
 // === React Context ===
 
 interface AuthContextType {
@@ -181,7 +202,7 @@ export function useAuth() {
 
 // === Utility exports ===
 
-export { getToken, setToken, clearToken, cacheUser, fetchSubscriberById, fetchSubscriberByChatId };
+export { getToken, setToken, clearToken, cacheUser, fetchSubscriberById, fetchSubscriberByChatId, registerSubscriber };
 
 export function getUserName(user: Subscriber | null): string {
   if (!user) return "Гость";

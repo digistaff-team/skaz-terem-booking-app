@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { fetchSubscriberById, fetchSubscriberByChatId, setToken, cacheUser, getUserName } from "@/lib/auth";
+import { fetchSubscriberById, fetchSubscriberByChatId, registerSubscriber, setToken, cacheUser, getUserName } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle2, XCircle, Send } from "lucide-react";
 
@@ -35,8 +35,21 @@ const Auth = () => {
           setStatus("error");
           return;
         }
+
+        // Сначала пробуем найти существующего пользователя
         subscriber = await fetchSubscriberByChatId(chatId);
-        authId = subscriber?.id || "";
+
+        // Если не найден — регистрируем автоматически
+        if (!subscriber) {
+          const newId = await registerSubscriber(chatId);
+          if (newId) {
+            // Перезапрашиваем данные после регистрации
+            subscriber = await fetchSubscriberByChatId(chatId);
+            authId = newId;
+          }
+        } else {
+          authId = subscriber.id;
+        }
       }
 
       if (subscriber && authId) {
