@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { fetchSubscriberById, setToken, cacheUser, getUserName } from "@/lib/auth";
+import { fetchSubscriberById, fetchSubscriberByChatId, setToken, cacheUser, getUserName } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle2, XCircle, Send } from "lucide-react";
 
@@ -12,24 +12,45 @@ const Auth = () => {
 
   useEffect(() => {
     const token = searchParams.get("token");
-    if (!token) {
+    const chatIdParam = searchParams.get("chat_id");
+
+    if (!token && !chatIdParam) {
       setStatus("error");
       return;
     }
 
-    fetchSubscriberById(token).then((subscriber) => {
-      if (subscriber) {
-        setToken(token);
+    // Приоритет: token (от нашего бота), fallback: chat_id (от Pro-Talk)
+    const processAuth = async () => {
+      let subscriber = null;
+      let authId = "";
+
+      if (token) {
+        // Вариант 1: авторизация по токену (наш бот)
+        subscriber = await fetchSubscriberById(token);
+        authId = token;
+      } else if (chatIdParam) {
+        // Вариант 2: авторизация по chat_id (Pro-Talk бот)
+        const chatId = parseInt(chatIdParam, 10);
+        if (isNaN(chatId)) {
+          setStatus("error");
+          return;
+        }
+        subscriber = await fetchSubscriberByChatId(chatId);
+        authId = subscriber?.id || "";
+      }
+
+      if (subscriber && authId) {
+        setToken(authId);
         cacheUser(subscriber);
         setUserName(getUserName(subscriber));
         setStatus("success");
-
-        // Redirect after short delay
         setTimeout(() => navigate("/"), 2000);
       } else {
         setStatus("error");
       }
-    });
+    };
+
+    processAuth();
   }, [searchParams, navigate]);
 
   return (
@@ -66,8 +87,8 @@ const Auth = () => {
               <div>
                 <h1 className="text-xl font-bold text-foreground mb-2">Не удалось войти</h1>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Ссылка недействительна или ваша подписка не найдена.
-                  Запросите новую ссылку у бота.
+                  Ссылка недействительна или ваш аккаунт не найден.
+                  Убедитесь, что вы подписаны на бота @SkazTerem_bot.
                 </p>
                 <a
                   href="https://t.me/SkazTerem_bot"

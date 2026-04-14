@@ -74,6 +74,29 @@ async function fetchSubscriberById(id: string): Promise<Subscriber | null> {
   };
 }
 
+async function fetchSubscriberByChatId(chatId: number): Promise<Subscriber | null> {
+  const { data, error } = await supabase
+    .from("subscribers")
+    .select("*")
+    .eq("chat_id", chatId)
+    .eq("is_active", true)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return {
+    id: data.id,
+    chatId: data.chat_id,
+    username: data.username,
+    firstName: data.first_name,
+    lastName: data.last_name,
+    subscribedAt: data.subscribed_at,
+    isActive: data.is_active,
+  };
+}
+
 // === React Context ===
 
 interface AuthContextType {
@@ -158,7 +181,7 @@ export function useAuth() {
 
 // === Utility exports ===
 
-export { getToken, setToken, clearToken, fetchSubscriberById, cacheUser };
+export { getToken, setToken, clearToken, cacheUser, fetchSubscriberById, fetchSubscriberByChatId };
 
 export function getUserName(user: Subscriber | null): string {
   if (!user) return "Гость";
