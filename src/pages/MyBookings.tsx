@@ -70,7 +70,9 @@ const MyBookings = () => {
                 }`}
               >
                 <div className="flex items-start justify-between mb-3">
-                  <h3 className="font-semibold text-foreground text-lg">{b.title}</h3>
+                  <h3 className={`font-semibold text-lg transition-colors duration-300 ${
+                    cancellingId === b.id ? "text-muted-foreground" : "text-foreground"
+                  }`}>{b.title}</h3>
                   <button
                     onClick={() => handleCancel(b.id)}
                     disabled={cancellingId !== null}
