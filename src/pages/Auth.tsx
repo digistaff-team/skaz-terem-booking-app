@@ -11,45 +11,33 @@ const Auth = () => {
   const [userName, setUserName] = useState("");
 
   useEffect(() => {
-    const token = searchParams.get("token");
     const chatIdParam = searchParams.get("chat_id");
 
-    if (!token && !chatIdParam) {
+    if (!chatIdParam) {
       setStatus("error");
       return;
     }
 
-    // Приоритет: token (от нашего бота), fallback: chat_id (от Pro-Talk)
     const processAuth = async () => {
-      let subscriber = null;
+      const chatId = parseInt(chatIdParam, 10);
+      if (isNaN(chatId)) {
+        setStatus("error");
+        return;
+      }
+
+      // Сначала пробуем найти существующего пользователя
+      let subscriber = await fetchSubscriberByChatId(chatId);
       let authId = "";
 
-      if (token) {
-        // Вариант 1: авторизация по токену (наш бот)
-        subscriber = await fetchSubscriberById(token);
-        authId = token;
-      } else if (chatIdParam) {
-        // Вариант 2: авторизация по chat_id (Pro-Talk бот)
-        const chatId = parseInt(chatIdParam, 10);
-        if (isNaN(chatId)) {
-          setStatus("error");
-          return;
+      // Если не найден — регистрируем автоматически
+      if (!subscriber) {
+        const newId = await registerSubscriber(chatId);
+        if (newId) {
+          subscriber = await fetchSubscriberById(newId);
+          authId = newId;
         }
-
-        // Сначала пробуем найти существующего пользователя
-        subscriber = await fetchSubscriberByChatId(chatId);
-
-        // Если не найден — регистрируем автоматически
-        if (!subscriber) {
-          const newId = await registerSubscriber(chatId);
-          if (newId) {
-            // Перезапрашиваем данные после регистрации
-            subscriber = await fetchSubscriberByChatId(chatId);
-            authId = newId;
-          }
-        } else {
-          authId = subscriber.id;
-        }
+      } else {
+        authId = subscriber.id;
       }
 
       if (subscriber && authId) {

@@ -97,13 +97,29 @@ async function fetchSubscriberByChatId(chatId: number): Promise<Subscriber | nul
   };
 }
 
+interface TelegramUser {
+  id: number;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+}
+
+function getTelegramUser(): TelegramUser | null {
+  try {
+    return (window as any).Telegram?.WebApp?.initDataUnsafe?.user ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function registerSubscriber(chatId: number): Promise<string | null> {
+  const tgUser = getTelegramUser();
   try {
     const { data, error } = await supabase.rpc("register_subscriber", {
       p_chat_id: chatId,
-      p_username: null,
-      p_first_name: null,
-      p_last_name: null,
+      p_username: tgUser?.username ?? null,
+      p_first_name: tgUser?.first_name ?? null,
+      p_last_name: tgUser?.last_name ?? null,
     });
 
     if (error) {

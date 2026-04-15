@@ -6,13 +6,25 @@ import { Room } from "@/types/booking";
 import { CalendarDays, BookOpen, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
+import { toast } from "sonner";
 
 const Index = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
 
   const handleRoomSelect = (room: Room) => {
+    if (!isAuthenticated) {
+      toast.info("Для бронирования откройте приложение через бота @SkazTerem_bot");
+      return;
+    }
     navigate(`/book?room=${room.id}`);
+  };
+
+  const handleBookClick = (e: React.MouseEvent) => {
+    if (!isAuthenticated) {
+      e.preventDefault();
+      toast.info("Для бронирования откройте приложение через бота @SkazTerem_bot");
+    }
   };
 
   return (
@@ -52,7 +64,7 @@ const Index = () => {
             Уютное место для работы, встреч, мастер-классов и праздников. Выберите помещение и забронируйте заранее.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Link to="/book">
+            <Link to="/book" onClick={handleBookClick}>
               <Button size="lg" className="gap-2">
                 <CalendarDays className="h-5 w-5" /> Забронировать
               </Button>

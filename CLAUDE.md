@@ -20,7 +20,7 @@ This is a **room booking web app** for "Сказочный Терем" — a ren
 
 ### Authentication
 
-Auth is Telegram-based, not Supabase Auth. Users land on `/auth?token=<id>` or `/auth?chat_id=<id>` from the Telegram bot. The auth page (`src/pages/Auth.tsx`) validates the subscriber and stores their UUID in `localStorage` as `auth_token`. The `AuthProvider` in `src/lib/auth.tsx` reads this token and fetches the subscriber from the `subscribers` Supabase table on load.
+Auth is Telegram-based, not Supabase Auth. Users land on `/auth?chat_id=<telegram_id>` from the Pro-Talk bot. The auth page (`src/pages/Auth.tsx`) looks up or auto-registers the subscriber and stores their UUID in `localStorage` as `auth_token`. The `AuthProvider` in `src/lib/auth.tsx` reads this token and re-validates it against the `subscribers` Supabase table on load.
 
 Protected routes (`/book`, `/bookings`) redirect unauthenticated users to `/`.
 
