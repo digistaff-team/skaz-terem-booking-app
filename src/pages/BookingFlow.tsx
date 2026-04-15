@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { rooms } from "@/data/rooms";
 import { Room, BookingFormData, Booking } from "@/types/booking";
-import { addBooking, isTimeSlotAvailable, getConflictingBookings } from "@/lib/bookingStore";
+import { addBooking, isTimeSlotAvailable, getConflictingBookings, getActiveBookingsForRoomDate } from "@/lib/bookingStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -431,61 +431,28 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
   initialStartTime?: string | null;
 }) {
   const [startTime, setStartTime] = useState<string | null>(initialStartTime || null);
-  const [availableEndSlots, setAvailableEndSlots] = useState<string[]>([]);
-  const [isChecking, setIsChecking] = useState(false);
-
-  // Если startTime уже задан (режим "Сейчас"), сразу проверяем слоты окончания
-  useEffect(() => {
-    if (initialStartTime && !startTime) {
-      setStartTime(initialStartTime);
-    }
-  }, [initialStartTime]);
+  const [existingBookings, setExistingBookings] = useState<import("@/types/booking").Booking[]>([]);
+  const [isLoadingBookings, setIsLoadingBookings] = useState(true);
 
   useEffect(() => {
-    if (startTime) {
-      const checkEndSlots = async () => {
-        setIsChecking(true);
-        setAvailableEndSlots([]);
-        const endSlots = TIME_SLOTS.filter((s) => s > startTime);
-        try {
-          const available = await Promise.all(
-            endSlots.map(async (end) => {
-              const isAvail = await isTimeSlotAvailable(roomId, date, startTime, end);
-              return isAvail ? end : null;
-            })
-          );
-          const filtered = available.filter(Boolean) as string[];
-          setAvailableEndSlots(filtered);
-        } catch (err) {
-          console.error("[TimeSlot check] Error:", err);
-        } finally {
-          setIsChecking(false);
-        }
-      };
-      checkEndSlots();
-    }
-  }, [startTime, date, roomId]);
+    setIsLoadingBookings(true);
+    getActiveBookingsForRoomDate(roomId, date).then((bookings) => {
+      setExistingBookings(bookings);
+      setIsLoadingBookings(false);
+    });
+  }, [roomId, date]);
 
-  const handleStartSelect = async (t: string) => {
-    setStartTime(t);
-    setIsChecking(true);
-    setAvailableEndSlots([]);
-    const endSlots = TIME_SLOTS.filter((s) => s > t);
-    try {
-      const available = await Promise.all(
-        endSlots.map(async (end) => {
-          const isAvail = await isTimeSlotAvailable(roomId, date, t, end);
-          return isAvail ? end : null;
-        })
-      );
-      const filtered = available.filter(Boolean) as string[];
-      setAvailableEndSlots(filtered);
-    } catch (err) {
-      console.error("[handleStartSelect] Error:", err);
-    } finally {
-      setIsChecking(false);
-    }
-  };
+  // Слот начала заблокирован, если он попадает внутрь уже существующей брони
+  const isStartBlocked = (t: string) =>
+    existingBookings.some((b) => b.startTime <= t && t < b.endTime);
+
+  // Доступные слоты окончания — клиентская фильтрация без лишних запросов
+  const getAvailableEndSlots = (start: string) =>
+    TIME_SLOTS.filter(
+      (e) => e > start && !existingBookings.some((b) => b.startTime < e && b.endTime > start)
+    );
+
+  const availableEndSlots = startTime ? getAvailableEndSlots(startTime) : [];
 
   return (
     <div>
@@ -496,21 +463,23 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
       <p className="mb-2 text-lg font-semibold text-primary">{roomIcon} {roomName}</p>
       <p className="mb-6 text-muted-foreground">{formatDate(date)}</p>
 
-      {!startTime ? (
+      {isLoadingBookings ? (
+        <p className="text-sm text-muted-foreground animate-pulse">⏳ Загружаю расписание...</p>
+      ) : !startTime ? (
         <div className="grid grid-cols-3 gap-2">
           {(() => {
-            // Фильтруем прошедшие слоты, если дата — сегодня
             const today = new Date().toISOString().split("T")[0];
             const isToday = date === today;
             const currentHour = new Date().getHours();
-            const visibleSlots = isToday
+            const visibleSlots = (isToday
               ? TIME_SLOTS.filter((t) => parseInt(t) > currentHour)
-              : TIME_SLOTS;
+              : TIME_SLOTS
+            ).filter((t) => !isStartBlocked(t));
 
             if (visibleSlots.length === 0) {
               return (
                 <div className="col-span-3 text-center py-6 text-muted-foreground">
-                  <p>Сегодня время уже прошло</p>
+                  <p>На этот день нет свободного времени</p>
                 </div>
               );
             }
@@ -518,7 +487,7 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
             return visibleSlots.map((t) => (
               <button
                 key={t}
-                onClick={() => handleStartSelect(t)}
+                onClick={() => setStartTime(t)}
                 className="rounded-lg border border-border bg-card px-3 py-3 text-center font-medium text-foreground transition-all hover:border-primary/50 hover:bg-primary/5"
               >
                 {t}
@@ -530,7 +499,7 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
         <div>
           <p className="mb-4 text-sm text-muted-foreground">
             Начало: <span className="font-semibold text-foreground">{startTime}</span>
-            <button onClick={() => { setStartTime(null); setAvailableEndSlots([]); }} className="ml-2 text-primary hover:underline">изменить</button>
+            <button onClick={() => setStartTime(null)} className="ml-2 text-primary hover:underline">изменить</button>
           </p>
           <div className="grid grid-cols-3 gap-2">
             {availableEndSlots.map((t) => (
@@ -543,13 +512,9 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
               </button>
             ))}
           </div>
-          {isChecking ? (
-            <p className="text-sm text-muted-foreground animate-pulse">
-              ⏳ Проверяю, свободно ли помещение в это время...
-            </p>
-          ) : availableEndSlots.length === 0 ? (
+          {availableEndSlots.length === 0 && (
             <p className="text-sm text-muted-foreground">Нет доступных слотов после {startTime}</p>
-          ) : null}
+          )}
         </div>
       )}
     </div>

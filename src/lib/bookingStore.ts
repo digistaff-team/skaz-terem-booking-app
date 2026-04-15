@@ -4,6 +4,16 @@ import {
   syncBookingToGoogleCalendar,
   cancelBookingInGoogleCalendar,
 } from "./googleCalendar";
+import { rooms } from "@/data/rooms";
+
+const WHOLE_HOUSE_ID = "whole-house";
+const ALL_ROOM_IDS = rooms.map((r) => r.id);
+
+// Весь Терем конфликтует со всеми помещениями, каждое помещение — с Весь Терем
+function getConflictingRoomIds(roomId: string): string[] {
+  if (roomId === WHOLE_HOUSE_ID) return ALL_ROOM_IDS;
+  return [roomId, WHOLE_HOUSE_ID];
+}
 
 export async function getBookings(userId?: string): Promise<Booking[]> {
   let query = supabase
@@ -135,6 +145,21 @@ export async function getCurrentBooking(
   };
 }
 
+export async function getActiveBookingsForRoomDate(
+  roomId: string,
+  date: string
+): Promise<Booking[]> {
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("id, room_id, room_name, date, start_time, end_time, title, description, user_name, status")
+    .in("room_id", getConflictingRoomIds(roomId))
+    .eq("date", date)
+    .eq("status", "active");
+
+  if (error) return [];
+  return (data ?? []).map(mapRow);
+}
+
 export async function isTimeSlotAvailable(
   roomId: string,
   date: string,
@@ -156,7 +181,7 @@ export async function getConflictingBookings(
   let query = supabase
     .from("bookings")
     .select("id, room_id, room_name, date, start_time, end_time, title, description, user_name, status")
-    .eq("room_id", roomId)
+    .in("room_id", getConflictingRoomIds(roomId))
     .eq("date", date)
     .eq("status", "active")
     .lt("start_time", endTime)
