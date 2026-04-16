@@ -56,10 +56,13 @@ const Index = () => {
 
       {/* DEBUG: временный диагностический баннер — удалить после отладки */}
       {!isAuthenticated && (
-        <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 text-xs text-yellow-800 font-mono break-all">
-          <p><b>tg defined:</b> {String(!!window.Telegram)}</p>
+        <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 text-xs text-yellow-800 font-mono break-all space-y-0.5">
+          <p><b>tg:</b> {String(!!window.Telegram)}</p>
           <p><b>WebApp:</b> {String(!!(window.Telegram?.WebApp))}</p>
+          <p><b>initData:</b> {window.Telegram?.WebApp?.initData || "пусто"}</p>
           <p><b>initDataUnsafe:</b> {JSON.stringify(window.Telegram?.WebApp?.initDataUnsafe ?? "—")}</p>
+          <p><b>version:</b> {(window.Telegram?.WebApp as any)?.version ?? "—"}</p>
+          <p><b>platform:</b> {(window.Telegram?.WebApp as any)?.platform ?? "—"}</p>
         </div>
       )}
 
