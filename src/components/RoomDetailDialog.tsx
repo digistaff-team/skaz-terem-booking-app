@@ -23,16 +23,16 @@ const RoomDetailDialog = ({ room, open, onClose, onBook }: RoomDetailDialogProps
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg p-0 overflow-hidden" hideCloseButton>
+      <DialogContent className="max-w-lg p-0 overflow-hidden max-h-[90dvh] flex flex-col" hideCloseButton>
         {image && (
           <img
             src={image}
             alt={room.name}
-            className="h-52 w-full object-cover"
+            className="h-52 w-full object-cover shrink-0"
           />
         )}
 
-        <div className="p-6 pt-4">
+        <div className="p-6 pt-4 overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl">
               <span>{room.icon}</span> {room.name}
