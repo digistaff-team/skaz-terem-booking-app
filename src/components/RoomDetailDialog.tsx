@@ -8,7 +8,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogClose,
 } from "@/components/ui/dialog";
 
 interface RoomDetailDialogProps {
@@ -23,16 +22,16 @@ const RoomDetailDialog = ({ room, open, onClose, onBook }: RoomDetailDialogProps
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg p-0 overflow-hidden max-h-[90dvh] flex flex-col" hideCloseButton>
+      <DialogContent className="max-w-lg p-0 overflow-hidden">
         {image && (
           <img
             src={image}
             alt={room.name}
-            className="h-52 w-full object-cover shrink-0"
+            className="h-52 w-full object-cover"
           />
         )}
 
-        <div className="p-6 pt-4 overflow-y-auto">
+        <div className="p-6 pt-4">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl">
               <span>{room.icon}</span> {room.name}
@@ -83,11 +82,6 @@ const RoomDetailDialog = ({ room, open, onClose, onBook }: RoomDetailDialogProps
           <Button className="mt-6 w-full" size="lg" onClick={onBook}>
             Забронировать
           </Button>
-          <DialogClose asChild>
-            <Button variant="ghost" className="mt-2 w-full" onClick={onClose}>
-              Закрыть
-            </Button>
-          </DialogClose>
         </div>
       </DialogContent>
     </Dialog>
