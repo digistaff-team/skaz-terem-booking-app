@@ -68,15 +68,11 @@ const Index = () => {
                 <CalendarDays className="h-5 w-5" /> Забронировать
               </Button>
             </Link>
-            <a
-              href="https://calendar.google.com/calendar/embed?src=skaz.terem%40gmail.com&ctz=Europe%2FMoscow&mode=AGENDA"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <Link to="/schedule">
               <Button variant="outline" size="lg" className="gap-2">
                 <BookOpen className="h-5 w-5" /> Расписание
               </Button>
-            </a>
+            </Link>
           </div>
         </div>
 

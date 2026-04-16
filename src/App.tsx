@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import Index from "./pages/Index.tsx";
 import BookingFlow from "./pages/BookingFlow.tsx";
 import MyBookings from "./pages/MyBookings.tsx";
+import Schedule from "./pages/Schedule.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      <Route path="/schedule" element={<Schedule />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

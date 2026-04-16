@@ -160,6 +160,18 @@ export async function getActiveBookingsForRoomDate(
   return (data ?? []).map(mapRow);
 }
 
+export async function getBookingsForDate(date: string): Promise<Booking[]> {
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("id, room_id, room_name, date, start_time, end_time, title, description, user_name, user_id, status, created_at")
+    .eq("date", date)
+    .eq("status", "active")
+    .order("start_time", { ascending: true });
+
+  if (error) return [];
+  return (data ?? []).map(mapRow);
+}
+
 export async function isTimeSlotAvailable(
   roomId: string,
   date: string,
