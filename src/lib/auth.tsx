@@ -166,34 +166,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const token = getToken();
-    if (token) {
-      const cached = getCachedUser();
-      if (cached) {
-        setUser(cached);
-        setIsLoading(false);
-      }
-
-      fetchSubscriberById(token).then((subscriber) => {
-        if (subscriber) {
-          setUser(subscriber);
-          cacheUser(subscriber);
-        } else {
-          clearToken();
-          setUser(null);
-          cacheUser(null);
-        }
-        setIsLoading(false);
-      });
-    } else {
-      // Нет токена — пробуем авто-аутентификацию через Telegram Mini App
+    const tryTelegramAuth = () => {
       const tg = window.Telegram?.WebApp;
       const tgUser = tg?.initDataUnsafe?.user;
-
-      console.log("[Auth] window.Telegram defined:", !!window.Telegram);
-      console.log("[Auth] window.Telegram.WebApp defined:", !!tg);
-      console.log("[Auth] initDataUnsafe:", JSON.stringify(tg?.initDataUnsafe));
-      console.log("[Auth] tgUser:", JSON.stringify(tgUser));
 
       if (tgUser?.id) {
         localStorage.setItem("_dbg", `step1:id=${tgUser.id}`);
@@ -219,6 +194,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem("_dbg", "no_tg_user");
         setIsLoading(false);
       }
+    };
+
+    const token = getToken();
+    if (token) {
+      const cached = getCachedUser();
+      if (cached) {
+        setUser(cached);
+        setIsLoading(false);
+      }
+
+      fetchSubscriberById(token).then((subscriber) => {
+        if (subscriber) {
+          setUser(subscriber);
+          cacheUser(subscriber);
+          setIsLoading(false);
+        } else {
+          clearToken();
+          setUser(null);
+          cacheUser(null);
+          // Токен невалиден — пробуем авторизацию через Telegram
+          tryTelegramAuth();
+        }
+      });
+    } else {
+      tryTelegramAuth();
     }
   }, []);
 
