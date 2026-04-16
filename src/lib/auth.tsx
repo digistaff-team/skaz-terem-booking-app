@@ -171,13 +171,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const tgUser = tg?.initDataUnsafe?.user;
 
       if (tgUser?.id) {
-        localStorage.setItem("_dbg", `step1:id=${tgUser.id}`);
         registerSubscriber(tgUser.id, tgUser.first_name, tgUser.last_name, tgUser.username)
           .then(async (authId) => {
-            localStorage.setItem("_dbg", `step2:authId=${authId}`);
             if (authId) {
               const subscriber = await fetchSubscriberById(authId);
-              localStorage.setItem("_dbg", `step3:subscriber=${subscriber ? subscriber.id : "null"}`);
               if (subscriber) {
                 setToken(authId);
                 cacheUser(subscriber);
@@ -186,12 +183,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
             setIsLoading(false);
           })
-          .catch((err) => {
-            localStorage.setItem("_dbg", `error:${String(err)}`);
+          .catch(() => {
             setIsLoading(false);
           });
       } else {
-        localStorage.setItem("_dbg", "no_tg_user");
         setIsLoading(false);
       }
     };
