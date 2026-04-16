@@ -18,10 +18,9 @@ import { useAuth, getUserName } from "@/lib/auth";
 
 type Step = "room" | "date" | "time" | "details" | "confirm";
 
-const TIME_SLOTS = Array.from({ length: 15 }, (_, i) => {
-  const h = 8 + i;
-  return `${h.toString().padStart(2, "0")}:00`;
-});
+const TIME_SLOTS = Array.from({ length: 24 }, (_, i) =>
+  `${i.toString().padStart(2, "0")}:00`
+);
 
 const BookingFlow = () => {
   const navigate = useNavigate();
