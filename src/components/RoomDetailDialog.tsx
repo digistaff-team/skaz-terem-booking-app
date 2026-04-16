@@ -23,16 +23,16 @@ const RoomDetailDialog = ({ room, open, onClose, onBook }: RoomDetailDialogProps
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg p-0 overflow-hidden" hideCloseButton>
+      <DialogContent className="max-w-lg p-0 overflow-hidden max-h-[90dvh] flex flex-col" hideCloseButton>
         {image && (
           <img
             src={image}
             alt={room.name}
-            className="h-52 w-full object-cover"
+            className="h-52 w-full object-cover shrink-0"
           />
         )}
 
-        <div className="relative p-6 pt-4">
+        <div className="relative overflow-y-auto p-6 pt-4">
           <button
             onClick={onClose}
             className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80"
@@ -85,8 +85,10 @@ const RoomDetailDialog = ({ room, open, onClose, onBook }: RoomDetailDialogProps
               🙏 Без употребления пищи. Кухня и санузел на 1-м этаже.
             </p>
           )}
+        </div>
 
-          <Button className="mt-6 w-full" size="lg" onClick={onBook}>
+        <div className="shrink-0 border-t border-border p-4">
+          <Button className="w-full" size="lg" onClick={onBook}>
             Забронировать
           </Button>
         </div>
