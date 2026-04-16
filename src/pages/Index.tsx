@@ -63,6 +63,7 @@ const Index = () => {
           <p><b>initDataUnsafe:</b> {JSON.stringify(window.Telegram?.WebApp?.initDataUnsafe ?? "—")}</p>
           <p><b>version:</b> {(window.Telegram?.WebApp as any)?.version ?? "—"}</p>
           <p><b>platform:</b> {(window.Telegram?.WebApp as any)?.platform ?? "—"}</p>
+          <p><b>auth step:</b> {localStorage.getItem("_dbg") ?? "не запускался"}</p>
         </div>
       )}
 

@@ -196,12 +196,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("[Auth] tgUser:", JSON.stringify(tgUser));
 
       if (tgUser?.id) {
+        localStorage.setItem("_dbg", `step1:id=${tgUser.id}`);
         registerSubscriber(tgUser.id, tgUser.first_name, tgUser.last_name, tgUser.username)
           .then(async (authId) => {
-            console.log("[Auth] registerSubscriber authId:", authId);
+            localStorage.setItem("_dbg", `step2:authId=${authId}`);
             if (authId) {
               const subscriber = await fetchSubscriberById(authId);
-              console.log("[Auth] fetchSubscriberById result:", JSON.stringify(subscriber));
+              localStorage.setItem("_dbg", `step3:subscriber=${subscriber ? subscriber.id : "null"}`);
               if (subscriber) {
                 setToken(authId);
                 cacheUser(subscriber);
@@ -211,10 +212,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setIsLoading(false);
           })
           .catch((err) => {
-            console.error("[Auth] Mini App auth error:", err);
+            localStorage.setItem("_dbg", `error:${String(err)}`);
             setIsLoading(false);
           });
       } else {
+        localStorage.setItem("_dbg", "no_tg_user");
         setIsLoading(false);
       }
     }
