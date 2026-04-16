@@ -470,56 +470,56 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
         <p className="text-sm text-muted-foreground animate-pulse">⏳ Загружаю расписание...</p>
       ) : !startTime ? (
         <>
-        <div className="grid grid-cols-3 gap-2">
-          {(() => {
-            const today = new Date().toISOString().split("T")[0];
-            const isToday = date === today;
-            const currentHour = new Date().getHours();
-            const visibleSlots = (isToday
-              ? TIME_SLOTS.filter((t) => parseInt(t) > currentHour)
-              : TIME_SLOTS
-            ).filter((t) => !isStartBlocked(t));
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            {(() => {
+              const today = new Date().toISOString().split("T")[0];
+              const isToday = date === today;
+              const currentHour = new Date().getHours();
+              const visibleSlots = (isToday
+                ? TIME_SLOTS.filter((t) => parseInt(t) > currentHour)
+                : TIME_SLOTS
+              ).filter((t) => !isStartBlocked(t));
 
-            if (visibleSlots.length === 0) {
-              return (
-                <div className="col-span-3 text-center py-6 text-muted-foreground">
-                  <p>На этот день нет свободного времени</p>
-                </div>
-              );
-            }
-
-            return visibleSlots.map((t) => (
-              <button
-                key={t}
-                onClick={() => setStartTime(t)}
-                className="rounded-lg border border-border bg-card px-3 py-3 text-center font-medium text-foreground transition-all hover:border-primary/50 hover:bg-primary/5"
-              >
-                {t}
-              </button>
-            ));
-          })()}
-        </div>
-        <div className="mt-4 flex items-center gap-2">
-          <input
-            type="time"
-            value={customStart}
-            onChange={(e) => setCustomStart(e.target.value)}
-            className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-          />
-          <button
-            onClick={() => {
-              if (!customStart) return;
-              if (isStartBlocked(customStart)) {
-                toast.error("Это время уже занято");
-                return;
+              if (visibleSlots.length === 0) {
+                return (
+                  <div className="col-span-2 text-center py-6 text-muted-foreground">
+                    <p>На этот день нет свободного времени</p>
+                  </div>
+                );
               }
-              setStartTime(customStart);
-            }}
-            className="rounded-lg border border-primary bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20"
-          >
-            Выбрать
-          </button>
-        </div>
+
+              return visibleSlots.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setStartTime(t)}
+                  className="rounded-xl border border-border bg-card p-4 text-left transition-all hover:shadow-md hover:border-primary/30"
+                >
+                  <p className="font-semibold text-foreground">{t}</p>
+                </button>
+              ));
+            })()}
+          </div>
+          <div>
+            <Label htmlFor="custom-start-time" className="text-sm text-muted-foreground">
+              Или выберите другое время
+            </Label>
+            <Input
+              id="custom-start-time"
+              type="time"
+              value={customStart}
+              onChange={(e) => {
+                setCustomStart(e.target.value);
+                if (e.target.value) {
+                  if (isStartBlocked(e.target.value)) {
+                    toast.error("Это время уже занято");
+                    return;
+                  }
+                  setStartTime(e.target.value);
+                }
+              }}
+              className="mt-2"
+            />
+          </div>
         </>
       ) : (
         <div>
