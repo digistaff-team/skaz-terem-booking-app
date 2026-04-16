@@ -470,7 +470,7 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
         <p className="text-sm text-muted-foreground animate-pulse">⏳ Загружаю расписание...</p>
       ) : !startTime ? (
         <>
-          <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="grid grid-cols-3 gap-2 mb-6">
             {(() => {
               const today = new Date().toISOString().split("T")[0];
               const isToday = date === today;
@@ -482,7 +482,7 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
 
               if (visibleSlots.length === 0) {
                 return (
-                  <div className="col-span-2 text-center py-6 text-muted-foreground">
+                  <div className="col-span-3 text-center py-6 text-muted-foreground">
                     <p>На этот день нет свободного времени</p>
                   </div>
                 );
@@ -492,9 +492,9 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
                 <button
                   key={t}
                   onClick={() => setStartTime(t)}
-                  className="rounded-xl border border-border bg-card p-4 text-left transition-all hover:shadow-md hover:border-primary/30"
+                  className="rounded-lg border border-border bg-card px-3 py-3 text-center font-medium text-foreground transition-all hover:border-primary/50 hover:bg-primary/5"
                 >
-                  <p className="font-semibold text-foreground">{t}</p>
+                  {t}
                 </button>
               ));
             })()}
