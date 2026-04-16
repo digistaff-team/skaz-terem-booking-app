@@ -433,6 +433,7 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
   initialStartTime?: string | null;
 }) {
   const [startTime, setStartTime] = useState<string | null>(initialStartTime || null);
+  const [customStart, setCustomStart] = useState("");
   const [existingBookings, setExistingBookings] = useState<import("@/types/booking").Booking[]>([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState(true);
 
@@ -496,6 +497,27 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
               </button>
             ));
           })()}
+        </div>
+        <div className="mt-4 flex items-center gap-2">
+          <input
+            type="time"
+            value={customStart}
+            onChange={(e) => setCustomStart(e.target.value)}
+            className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+          />
+          <button
+            onClick={() => {
+              if (!customStart) return;
+              if (isStartBlocked(customStart)) {
+                toast.error("Это время уже занято");
+                return;
+              }
+              setStartTime(customStart);
+            }}
+            className="rounded-lg border border-primary bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20"
+          >
+            Выбрать
+          </button>
         </div>
       ) : (
         <div>
