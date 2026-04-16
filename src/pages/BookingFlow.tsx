@@ -22,6 +22,9 @@ const TIME_SLOTS = Array.from({ length: 24 }, (_, i) =>
   `${i.toString().padStart(2, "0")}:00`
 );
 
+// Слоты окончания: те же 24 + 24:00 для бронирований до полуночи
+const END_TIME_SLOTS = [...TIME_SLOTS, "24:00"];
+
 const BookingFlow = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -447,7 +450,7 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
 
   // Доступные слоты окончания — клиентская фильтрация без лишних запросов
   const getAvailableEndSlots = (start: string) =>
-    TIME_SLOTS.filter(
+    END_TIME_SLOTS.filter(
       (e) => e > start && !existingBookings.some((b) => b.startTime < e && b.endTime > start)
     );
 
