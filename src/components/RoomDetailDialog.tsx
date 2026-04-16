@@ -2,6 +2,7 @@ import { Room } from "@/types/booking";
 import { roomImages } from "@/data/roomImages";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +23,7 @@ const RoomDetailDialog = ({ room, open, onClose, onBook }: RoomDetailDialogProps
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg p-0 overflow-hidden">
+      <DialogContent className="max-w-lg p-0 overflow-hidden" hideCloseButton>
         {image && (
           <img
             src={image}
@@ -31,7 +32,13 @@ const RoomDetailDialog = ({ room, open, onClose, onBook }: RoomDetailDialogProps
           />
         )}
 
-        <div className="p-6 pt-4">
+        <div className="relative p-6 pt-4">
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80"
+          >
+            <X className="h-4 w-4" />
+          </button>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl">
               <span>{room.icon}</span> {room.name}
