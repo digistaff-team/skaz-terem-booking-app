@@ -108,7 +108,7 @@ const Index = () => {
           </button>
 
           <Dialog open={rulesOpen} onOpenChange={setRulesOpen}>
-            <DialogContent className="max-w-lg max-h-[85dvh] flex flex-col">
+            <DialogContent className="max-w-lg h-dvh flex flex-col">
               <DialogHeader>
                 <DialogTitle>Правила Сказочного Терема</DialogTitle>
               </DialogHeader>
