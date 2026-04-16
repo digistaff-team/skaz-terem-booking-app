@@ -82,7 +82,7 @@ const RoomDetailDialog = ({ room, open, onClose, onBook }: RoomDetailDialogProps
 
           {room.noFood && (
             <p className="mt-3 text-xs text-muted-foreground">
-              🙏 Без употребления пищи. Кухня и санузел на 1-м этаже.
+              🙏 Без употребления пищи.
             </p>
           )}
 
