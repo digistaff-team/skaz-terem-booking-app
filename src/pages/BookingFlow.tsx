@@ -527,7 +527,7 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
             Начало: <span className="font-semibold text-foreground">{startTime}</span>
             <button onClick={() => setStartTime(null)} className="ml-2 text-primary hover:underline">изменить</button>
           </p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2 mb-6">
             {availableEndSlots.map((t) => (
               <button
                 key={t}
@@ -537,10 +537,33 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
                 {t}
               </button>
             ))}
+            {availableEndSlots.length === 0 && (
+              <p className="col-span-3 text-sm text-muted-foreground">Нет доступных слотов после {startTime}</p>
+            )}
           </div>
-          {availableEndSlots.length === 0 && (
-            <p className="text-sm text-muted-foreground">Нет доступных слотов после {startTime}</p>
-          )}
+          <div>
+            <Label htmlFor="custom-end-time" className="text-sm text-muted-foreground">
+              Или выберите другое время
+            </Label>
+            <Input
+              id="custom-end-time"
+              type="time"
+              onChange={(e) => {
+                const val = e.target.value;
+                if (!val) return;
+                if (val <= startTime) {
+                  toast.error("Время окончания должно быть позже начала");
+                  return;
+                }
+                if (existingBookings.some((b) => b.startTime < val && b.endTime > startTime)) {
+                  toast.error("Это время уже занято");
+                  return;
+                }
+                onSelect(startTime, val);
+              }}
+              className="mt-2"
+            />
+          </div>
         </div>
       )}
     </div>
