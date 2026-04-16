@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { fetchSubscriberById, fetchSubscriberByChatId, registerSubscriber, setToken, cacheUser, getUserName } from "@/lib/auth";
+import { fetchSubscriberById, registerSubscriber, setToken, cacheUser, getUserName } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle2, XCircle, Send } from "lucide-react";
 
@@ -25,22 +25,20 @@ const Auth = () => {
         return;
       }
 
-      // Сначала пробуем найти существующего пользователя
-      let subscriber = await fetchSubscriberByChatId(chatId);
-      let authId = "";
+      // Читаем данные пользователя из URL-параметров (Pro-Talk передаёт их в ссылке)
+      const firstName = searchParams.get("first_name");
+      const lastName = searchParams.get("last_name");
+      const username = searchParams.get("username");
 
-      // Если не найден — регистрируем автоматически
-      if (!subscriber) {
-        const newId = await registerSubscriber(chatId);
-        if (newId) {
-          subscriber = await fetchSubscriberById(newId);
-          authId = newId;
-        }
-      } else {
-        authId = subscriber.id;
+      // RPC создаёт нового или обновляет существующего — всегда возвращает UUID
+      const authId = await registerSubscriber(chatId, firstName, lastName, username);
+      if (!authId) {
+        setStatus("error");
+        return;
       }
 
-      if (subscriber && authId) {
+      const subscriber = await fetchSubscriberById(authId);
+      if (subscriber) {
         setToken(authId);
         cacheUser(subscriber);
         setUserName(getUserName(subscriber));

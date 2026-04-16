@@ -1,6 +1,26 @@
 import { useState, useEffect, createContext, useContext, createElement, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp: {
+        ready: () => void;
+        expand: () => void;
+        initDataUnsafe: {
+          user?: {
+            id: number;
+            username?: string;
+            first_name?: string;
+            last_name?: string;
+          };
+        };
+        colorScheme: "light" | "dark";
+      };
+    };
+  }
+}
+
 const AUTH_TOKEN_KEY = "auth_token";
 const AUTH_USER_KEY = "auth_user";
 
@@ -97,29 +117,18 @@ async function fetchSubscriberByChatId(chatId: number): Promise<Subscriber | nul
   };
 }
 
-interface TelegramUser {
-  id: number;
-  username?: string;
-  first_name?: string;
-  last_name?: string;
-}
-
-function getTelegramUser(): TelegramUser | null {
-  try {
-    return (window as any).Telegram?.WebApp?.initDataUnsafe?.user ?? null;
-  } catch {
-    return null;
-  }
-}
-
-async function registerSubscriber(chatId: number): Promise<string | null> {
-  const tgUser = getTelegramUser();
+async function registerSubscriber(
+  chatId: number,
+  firstName?: string | null,
+  lastName?: string | null,
+  username?: string | null
+): Promise<string | null> {
   try {
     const { data, error } = await supabase.rpc("register_subscriber", {
       p_chat_id: chatId,
-      p_username: tgUser?.username ?? null,
-      p_first_name: tgUser?.first_name ?? null,
-      p_last_name: tgUser?.last_name ?? null,
+      p_username: username ?? null,
+      p_first_name: firstName ?? null,
+      p_last_name: lastName ?? null,
     });
 
     if (error) {
@@ -177,7 +186,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
       });
     } else {
-      setIsLoading(false);
+      // Нет токена — пробуем авто-аутентификацию через Telegram Mini App
+      const tg = window.Telegram?.WebApp;
+      const tgUser = tg?.initDataUnsafe?.user;
+
+      console.log("[Auth] window.Telegram defined:", !!window.Telegram);
+      console.log("[Auth] window.Telegram.WebApp defined:", !!tg);
+      console.log("[Auth] initDataUnsafe:", JSON.stringify(tg?.initDataUnsafe));
+      console.log("[Auth] tgUser:", JSON.stringify(tgUser));
+
+      if (tgUser?.id) {
+        registerSubscriber(tgUser.id, tgUser.first_name, tgUser.last_name, tgUser.username)
+          .then(async (authId) => {
+            console.log("[Auth] registerSubscriber authId:", authId);
+            if (authId) {
+              const subscriber = await fetchSubscriberById(authId);
+              console.log("[Auth] fetchSubscriberById result:", JSON.stringify(subscriber));
+              if (subscriber) {
+                setToken(authId);
+                cacheUser(subscriber);
+                setUser(subscriber);
+              }
+            }
+            setIsLoading(false);
+          })
+          .catch((err) => {
+            console.error("[Auth] Mini App auth error:", err);
+            setIsLoading(false);
+          });
+      } else {
+        setIsLoading(false);
+      }
     }
   }, []);
 

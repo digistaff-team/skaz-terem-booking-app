@@ -54,6 +54,15 @@ const Index = () => {
         </div>
       </header>
 
+      {/* DEBUG: временный диагностический баннер — удалить после отладки */}
+      {!isAuthenticated && (
+        <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 text-xs text-yellow-800 font-mono break-all">
+          <p><b>tg defined:</b> {String(!!window.Telegram)}</p>
+          <p><b>WebApp:</b> {String(!!(window.Telegram?.WebApp))}</p>
+          <p><b>initDataUnsafe:</b> {JSON.stringify(window.Telegram?.WebApp?.initDataUnsafe ?? "—")}</p>
+        </div>
+      )}
+
       <main className="mx-auto max-w-5xl px-4 py-10">
         {/* Welcome */}
         <div className="mb-10 text-center">
