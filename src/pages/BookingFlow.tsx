@@ -169,8 +169,15 @@ const BookingFlow = () => {
   const goBack = () => {
     const steps: Step[] = ["room", "date", "time", "details", "confirm"];
     const idx = steps.indexOf(step);
-    if (idx > 0) setStep(steps[idx - 1]);
-    else navigate("/");
+    if (idx > 0) {
+      const prevStep = steps[idx - 1];
+      if (step === "time" || prevStep === "time") {
+        setFormData(p => ({ ...p, startTime: "", endTime: "" }));
+      }
+      setStep(prevStep);
+    } else {
+      navigate("/");
+    }
   };
 
   const formatDate = (d: string) => {
