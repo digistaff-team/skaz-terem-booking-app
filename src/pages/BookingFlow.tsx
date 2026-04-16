@@ -469,6 +469,7 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
       {isLoadingBookings ? (
         <p className="text-sm text-muted-foreground animate-pulse">⏳ Загружаю расписание...</p>
       ) : !startTime ? (
+        <>
         <div className="grid grid-cols-3 gap-2">
           {(() => {
             const today = new Date().toISOString().split("T")[0];
@@ -519,6 +520,7 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
             Выбрать
           </button>
         </div>
+        </>
       ) : (
         <div>
           <p className="mb-4 text-sm text-muted-foreground">
