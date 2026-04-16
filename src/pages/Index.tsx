@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { rooms } from "@/data/rooms";
 import RoomCard from "@/components/RoomCard";
@@ -5,12 +6,16 @@ import { useNavigate } from "react-router-dom";
 import { Room } from "@/types/booking";
 import { CalendarDays, BookOpen, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
+
+const RULES_DOC_URL = "https://docs.google.com/document/d/1IzZu5TbWXBxJ0GMgYMluc_rp9HMhgAQn23KK56HiuHQ/preview";
 
 const Index = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   const handleRoomSelect = (room: Room) => {
     if (!isAuthenticated) {
@@ -95,14 +100,25 @@ const Index = () => {
             <li>🧹 После посещения оставьте помещение в порядке</li>
             <li>🐱 Кот Персик — хранитель Терема. Будьте с ним уважительны</li>
           </ul>
-          <a
-            href="https://docs.google.com/document/d/1IzZu5TbWXBxJ0GMgYMluc_rp9HMhgAQn23KK56HiuHQ/edit?usp=sharing"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => setRulesOpen(true)}
             className="mt-4 inline-block text-sm font-medium text-primary hover:underline"
           >
             Полные правила →
-          </a>
+          </button>
+
+          <Dialog open={rulesOpen} onOpenChange={setRulesOpen}>
+            <DialogContent className="max-w-lg max-h-[85dvh] flex flex-col">
+              <DialogHeader>
+                <DialogTitle>Правила Сказочного Терема</DialogTitle>
+              </DialogHeader>
+              <iframe
+                src={RULES_DOC_URL}
+                className="flex-1 min-h-0 w-full rounded border-0"
+                title="Правила"
+              />
+            </DialogContent>
+          </Dialog>
         </section>
       </main>
 
