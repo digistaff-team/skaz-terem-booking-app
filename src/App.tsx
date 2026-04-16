@@ -7,7 +7,6 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import Index from "./pages/Index.tsx";
 import BookingFlow from "./pages/BookingFlow.tsx";
 import MyBookings from "./pages/MyBookings.tsx";
-import Auth from "./pages/Auth.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -36,7 +35,6 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<Index />} />
-      <Route path="/auth" element={<Auth />} />
       <Route
         path="/book"
         element={

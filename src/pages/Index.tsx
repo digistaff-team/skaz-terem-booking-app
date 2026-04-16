@@ -44,11 +44,9 @@ const Index = () => {
                 </Button>
               </Link>
             ) : (
-              <Link to="/auth">
-                <Button variant="ghost" size="sm" className="gap-1.5">
-                  <ClipboardList className="h-4 w-4" /> Мои брони
-                </Button>
-              </Link>
+              <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => toast.info("Для бронирования откройте приложение через бота @SkazTerem_bot")}>
+                <ClipboardList className="h-4 w-4" /> Мои брони
+              </Button>
             )}
           </div>
         </div>
