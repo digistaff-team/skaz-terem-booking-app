@@ -5,46 +5,59 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-bun run dev          # Start dev server (Vite)
-bun run build        # Production build
-bun run lint         # ESLint
-bun run test         # Run tests once (Vitest)
-bun run test:watch   # Vitest in watch mode
+npm run dev          # Start dev server (Vite)
+npm run build        # Production build
+npm run lint         # ESLint
+npm run test         # Run tests once (Vitest)
+npm run test:watch   # Vitest in watch mode
 ```
+
+`bun` also works as a package manager alternative to `npm`.
 
 ## Architecture
 
-This is a **room booking web app** for "Сказочный Терем" — a rental space in Russia. Users arrive via a Telegram bot link, authenticate, and book one of 5 rooms.
+This is a **room booking web app** for "Сказочный Терем" — a rental space in Russia. Users open the app as a Telegram Mini App via @SkazTerem_bot, authenticate automatically, and book one of 5 rooms.
 
 **Tech stack:** React 18 + TypeScript + Vite, Tailwind CSS (shadcn/ui components), Supabase (Postgres), TanStack Query, React Router v6.
 
 ### Authentication
 
-Auth is Telegram-based, not Supabase Auth. Users land on `/auth?chat_id=<telegram_id>` from the Pro-Talk bot. The auth page (`src/pages/Auth.tsx`) looks up or auto-registers the subscriber and stores their UUID in `localStorage` as `auth_token`. The `AuthProvider` in `src/lib/auth.tsx` reads this token and re-validates it against the `subscribers` Supabase table on load.
+Auth is Telegram-based, not Supabase Auth. `AuthProvider` in `src/lib/auth.tsx` runs on load:
 
-Protected routes (`/book`, `/bookings`) redirect unauthenticated users to `/`.
+1. If `localStorage["auth_token"]` exists → validate UUID against `subscribers` table. If invalid, clear and fall through.
+2. Try Telegram Mini App auto-auth via `window.Telegram.WebApp.initDataUnsafe.user` — calls Supabase RPC `register_subscriber` (creates or reactivates the user, returns UUID), stores UUID as `auth_token`.
+3. If neither works → unauthenticated (shows toast if user tries to book).
+
+Protected routes (`/book`, `/bookings`) redirect unauthenticated users to `/`. There is no `/auth` page — it was removed.
 
 ### Booking Flow
 
 `src/pages/BookingFlow.tsx` is a 5-step wizard: `room → date → time → details → confirm`.
 
-- URL param `?room=<id>` skips the room-selection step (used when navigating from a RoomCard).
-- Time slots run 08:00–22:00 in 1-hour increments (`TIME_SLOTS`).
-- The "Сейчас" (Now) button picks the next full hour and checks availability before jumping to time-end selection.
-- On confirm, the booking title is stored as `{roomName} | {eventTitle} | {userName}`.
-- After writing to Supabase, `syncBookingToGoogleCalendar()` is called fire-and-forget.
+- URL param `?room=<id>` skips the room-selection step.
+- `TIME_SLOTS` = 00:00–23:00 hourly; `END_TIME_SLOTS` adds `24:00` for midnight bookings.
+- **Back navigation clears time:** `goBack()` resets `formData.startTime` and `formData.endTime` when leaving or arriving at the "time" step — ensures `TimeStep` always mounts fresh.
+- Each time slot step fetches bookings once on mount via `getActiveBookingsForRoomDate`; filtering is client-side. A server-side `isTimeSlotAvailable` guard runs before confirm as a race-condition check.
+- On confirm, title is stored as `{roomName} | {eventTitle} | {userName}`.
+- After writing to Supabase, `syncBookingToGoogleCalendar()` is called (fire-and-forget, never throws).
+- Users can enter arbitrary start/end times via `<input type="time">` in addition to hourly slot buttons.
+
+### Pages
+
+- `/` — `Index.tsx`: main page with room cards, schedule button, rules popup (inline content, no iframe).
+- `/book` — `BookingFlow.tsx`: booking wizard (protected).
+- `/bookings` — `MyBookings.tsx`: user's active bookings with cancel (protected).
+- `/schedule` — `Schedule.tsx`: read-only view of all bookings for a selected date, sorted by time.
 
 ### Data Layer
 
-`src/lib/bookingStore.ts` — all Supabase queries for bookings (CRUD + conflict detection).
+`src/lib/bookingStore.ts` — all Supabase queries for bookings (CRUD + conflict detection + schedule).
 
-**Whole-house conflict logic:** `"whole-house"` conflicts with every individual room and vice versa. `getConflictingRoomIds(roomId)` expands the check: booking `"whole-house"` checks all 5 room IDs; booking any individual room checks `[roomId, "whole-house"]`. All conflict/availability queries use `.in("room_id", ...)` — never `.eq()`.
+**Whole-house conflict logic:** `"whole-house"` conflicts with every individual room and vice versa. `getConflictingRoomIds(roomId)` expands the check. All conflict/availability queries use `.in("room_id", ...)` — never `.eq()`.
 
-**Time slot availability in the UI:** `TimeStep` (inside `BookingFlow.tsx`) calls `getActiveBookingsForRoomDate` once on mount to fetch all active bookings for the room+date. Start slots that fall within an existing booking are hidden entirely. End slots are filtered client-side from the same data — no per-slot async calls. A final server-side `isTimeSlotAvailable` check is still made in `handleTimeSelect` as a race-condition guard before writing to Supabase.
+`src/lib/googleCalendar.ts` — syncs create/cancel to Google Calendars via Apps Script webhook (`VITE_GOOGLE_APPS_SCRIPT_URL`). Uses `mode: "no-cors"`; failures are logged but never thrown.
 
-`src/lib/googleCalendar.ts` — syncs create/cancel actions to individual Google Calendars via a Google Apps Script webhook. URL comes from `VITE_GOOGLE_APPS_SCRIPT_URL` env var. Uses `mode: "no-cors"` so responses are opaque; failures are logged but never thrown.
-
-`src/data/rooms.ts` — static room definitions. Each room has a `calendarId` pointing to its individual Google Calendar.
+`src/data/rooms.ts` — static room definitions (5 rooms). Each has a `calendarId`. The `title` field in bookings is parsed as `{roomName} | {eventTitle} | {userName}` — use `title.split(" | ")[1]` to extract event name.
 
 ### Supabase Tables
 
@@ -53,9 +66,13 @@ Protected routes (`/book`, `/bookings`) redirect unauthenticated users to `/`.
 
 The Supabase client in `src/integrations/supabase/client.ts` uses a hardcoded anon key (public, safe for client-side).
 
+### Telegram Mini App
+
+`public/telegram-web-app.js` is a locally hosted copy of the Telegram SDK (avoids CDN loading failures). Loaded first in `index.html`. `src/main.tsx` calls `WebApp.ready()` and `WebApp.expand()` before React renders.
+
 ### Styling
 
-Custom warm-amber theme defined in `src/index.css` using CSS custom properties. The `warm-glow` utility class (`background: linear-gradient(...)`) is used as the page background on all routes. All UI components are from shadcn/ui in `src/components/ui/`.
+Custom warm-amber theme in `src/index.css`. The `warm-glow` utility class is the page background on all routes. All UI components are from shadcn/ui in `src/components/ui/`. `DialogContent` accepts a `hideCloseButton` prop (added to `src/components/ui/dialog.tsx`) to suppress the default `×` button.
 
 ### Path Alias
 
