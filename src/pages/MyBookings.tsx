@@ -78,7 +78,8 @@ const MyBookings = () => {
                   <h3 className={`font-semibold text-base transition-colors duration-300 ${
                     cancellingId === b.id ? "text-muted-foreground" : "text-foreground"
                   }`}>
-                    {formatDate(b.date)} | {b.startTime} — {b.endTime}
+                    <span className="block">{formatDate(b.date)}</span>
+                    <span className="block">{b.startTime} — {b.endTime}</span>
                   </h3>
                   <button
                     onClick={() => handleCancel(b.id)}
