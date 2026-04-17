@@ -101,7 +101,7 @@ const Schedule = () => {
           {selectedDate === toISODate(new Date())
             ? format(new Date(selectedDate), "d MMMM, EEEE", { locale: ru })
             : selectedDate === toISODate(addDays(new Date(), 1))
-              ? `Завтра, ${format(new Date(selectedDate), "d MMMM", { locale: ru })}`
+              ? format(new Date(selectedDate), "d MMMM, EEEE", { locale: ru })
               : `${format(new Date(selectedDate), "d MMMM", { locale: ru })}, ${format(new Date(selectedDate), "EEEE", { locale: ru })}`}
         </h2>
 
