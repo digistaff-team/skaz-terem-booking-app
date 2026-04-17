@@ -31,10 +31,16 @@ const Schedule = () => {
   const [selectedDate, setSelectedDate] = useState<string>(toISODate(new Date()));
   const [calendarOpen, setCalendarOpen] = useState(false);
 
-  const { data: bookings = [], isLoading } = useQuery({
+  const { data: rawBookings = [], isLoading } = useQuery({
     queryKey: ["schedule", selectedDate],
     queryFn: () => getBookingsForDate(selectedDate),
   });
+
+  const today = toISODate(new Date());
+  const currentTime = new Date().toTimeString().slice(0, 5);
+  const bookings = selectedDate === today
+    ? rawBookings.filter((b) => b.endTime > currentTime)
+    : rawBookings;
 
   return (
     <div className="min-h-screen warm-glow">
