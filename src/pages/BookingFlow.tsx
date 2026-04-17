@@ -66,7 +66,7 @@ const BookingFlow = () => {
     const maxDate = new Date();
     maxDate.setDate(maxDate.getDate() + 90);
     if (date > maxDate.toISOString().split("T")[0]) {
-      toast.error("Бронирование возможно не более чем на 90 дней вперёд");
+      toast.error("До этой даты более чем 90 дней, бронирование на неё пока закрыто. Пожалуйста, выберите дату в пределах 90 дней от сегодняшней даты.");
       return;
     }
     setFormData((p) => ({ ...p, date }));
