@@ -42,7 +42,8 @@ export async function getActiveBookings(userId?: string): Promise<Booking[]> {
     .select("*")
     .eq("status", "active")
     .gte("date", today)
-    .order("date", { ascending: true });
+    .order("date", { ascending: true })
+    .order("start_time", { ascending: true });
 
   if (userId) {
     query = query.eq("user_id", userId);
