@@ -98,9 +98,11 @@ const Schedule = () => {
 
         {/* Date heading */}
         <h2 className="text-base font-medium text-muted-foreground">
-          {formatDisplayDate(selectedDate)}
-          {selectedDate !== toISODate(new Date()) && selectedDate !== toISODate(addDays(new Date(), 1)) &&
-            `, ${format(new Date(selectedDate), "EEEE", { locale: ru })}`}
+          {selectedDate === toISODate(new Date())
+            ? format(new Date(selectedDate), "d MMMM, EEEE", { locale: ru })
+            : selectedDate === toISODate(addDays(new Date(), 1))
+              ? `Завтра, ${format(new Date(selectedDate), "d MMMM", { locale: ru })}`
+              : `${format(new Date(selectedDate), "d MMMM", { locale: ru })}, ${format(new Date(selectedDate), "EEEE", { locale: ru })}`}
         </h2>
 
         {/* Bookings list */}
