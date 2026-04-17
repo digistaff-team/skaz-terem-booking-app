@@ -10,11 +10,14 @@ import { ArrowLeft, CalendarDays, Home, Trash2 } from "lucide-react";
 const MyBookings = () => {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const loadBookings = async () => {
+    setIsLoading(true);
     const data = await getActiveBookings(user?.id);
     setBookings(data);
+    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -56,7 +59,11 @@ const MyBookings = () => {
 
         <h1 className="mb-6 text-2xl font-bold text-foreground">Мои бронирования</h1>
 
-        {bookings.length === 0 ? (
+        {isLoading ? (
+          <div className="rounded-xl border border-border bg-card p-8 text-center">
+            <p className="text-muted-foreground animate-pulse">⏳ Ищем ваши бронирования...</p>
+          </div>
+        ) : bookings.length === 0 ? (
           <div className="rounded-xl border border-border bg-card p-8 text-center">
             <p className="text-muted-foreground mb-4">У вас пока нет активных бронирований</p>
             <Link to="/book">
