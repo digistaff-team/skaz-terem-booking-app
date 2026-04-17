@@ -4,7 +4,7 @@ import { rooms } from "@/data/rooms";
 import RoomCard from "@/components/RoomCard";
 import { useNavigate } from "react-router-dom";
 import { Room } from "@/types/booking";
-import { CalendarDays, BookOpen, ClipboardList } from "lucide-react";
+import { CalendarDays, BookOpen, ClipboardList, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth";
@@ -143,7 +143,11 @@ const Index = () => {
       </main>
 
       <footer className="border-t border-border py-6 text-center text-sm text-muted-foreground">
-        Куратор: Ольга Шанина +7 (989) 249-63-18
+        Куратор: Ольга Шанина{" "}
+        <a href="tel:+79892496318" className="inline-flex items-center gap-1 text-primary hover:underline">
+          <Phone className="h-3 w-3" />
+          +7 (989) 249-63-18
+        </a>
       </footer>
     </div>
   );
