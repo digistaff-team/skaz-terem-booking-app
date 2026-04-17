@@ -56,7 +56,12 @@ export async function getActiveBookings(userId?: string): Promise<Booking[]> {
     return [];
   }
 
-  return (data ?? []).map(mapRow);
+  const now = new Date();
+  const currentTime = now.toTimeString().slice(0, 5);
+
+  return (data ?? [])
+    .map(mapRow)
+    .filter((b) => b.date > today || b.endTime > currentTime);
 }
 
 export async function addBooking(
