@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { Booking } from "@/types/booking";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowLeft, CalendarDays, Clock, Home, Trash2 } from "lucide-react";
+import { ArrowLeft, CalendarDays, Home, Trash2 } from "lucide-react";
 
 const MyBookings = () => {
   const { user } = useAuth();
@@ -35,12 +35,17 @@ const MyBookings = () => {
     }
   };
 
-  const formatDate = (d: string) =>
-    new Date(d + "T12:00:00").toLocaleDateString("ru-RU", {
-      weekday: "short",
-      day: "numeric",
-      month: "long",
-    });
+  const formatDate = (d: string) => {
+    const date = new Date(d + "T12:00:00");
+    const dayMonth = date.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+    const weekday = date.toLocaleDateString("ru-RU", { weekday: "long" });
+    return `${dayMonth}, ${weekday}`;
+  };
+
+  const parseEventTitle = (title: string) => {
+    const parts = title.split(" | ");
+    return parts.length >= 2 ? parts[1] : title;
+  };
 
   return (
     <div className="min-h-screen warm-glow">
@@ -70,13 +75,15 @@ const MyBookings = () => {
                 }`}
               >
                 <div className="flex items-start justify-between mb-3">
-                  <h3 className={`font-semibold text-lg transition-colors duration-300 ${
+                  <h3 className={`font-semibold text-base transition-colors duration-300 ${
                     cancellingId === b.id ? "text-muted-foreground" : "text-foreground"
-                  }`}>{b.title}</h3>
+                  }`}>
+                    {formatDate(b.date)} | {b.startTime} — {b.endTime}
+                  </h3>
                   <button
                     onClick={() => handleCancel(b.id)}
                     disabled={cancellingId !== null}
-                    className={`transition-colors p-1 ${
+                    className={`transition-colors p-1 shrink-0 ${
                       cancellingId === b.id
                         ? "text-muted-foreground cursor-not-allowed"
                         : "text-muted-foreground hover:text-destructive"
@@ -86,18 +93,15 @@ const MyBookings = () => {
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
-                <div className="space-y-2 text-sm">
+                <div className="space-y-1.5 text-sm">
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    <Home className="h-4 w-4" /> {b.roomName}
+                    <Home className="h-4 w-4 shrink-0" /> {b.roomName}
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    <CalendarDays className="h-4 w-4" /> {formatDate(b.date)}
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Clock className="h-4 w-4" /> {b.startTime} — {b.endTime}
+                    <CalendarDays className="h-4 w-4 shrink-0" /> {parseEventTitle(b.title)}
                   </div>
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">Ответственный: {b.userName}</p>
+                <p className="mt-3 text-xs text-muted-foreground">Ответственный: {b.userName}</p>
                 {cancellingId === b.id && (
                   <p className="mt-3 text-sm text-muted-foreground animate-pulse">
                     ⏳ Удаляю ваше бронирование...
