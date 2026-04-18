@@ -18,6 +18,12 @@ import { useAuth, getUserName } from "@/lib/auth";
 
 type Step = "room" | "date" | "time" | "details" | "confirm";
 
+// На iOS нативный date/time спиннер вызывает onChange при каждом повороте колеса,
+// поэтому для iOS используем onBlur (срабатывает только после нажатия «Готово»).
+const isIOS =
+  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
 const TIME_SLOTS = Array.from({ length: 24 }, (_, i) =>
   `${i.toString().padStart(2, "0")}:00`
 );
@@ -302,8 +308,13 @@ const BookingFlow = () => {
                 min={new Date().toISOString().split("T")[0]}
                 max={(() => { const d = new Date(); d.setDate(d.getDate() + 90); return d.toISOString().split("T")[0]; })()}
                 value={pendingDate}
-                onChange={(e) => setPendingDate(e.target.value)}
-                onBlur={(e) => { if (e.target.value) handleDateSelect(e.target.value); }}
+                onChange={(e) => {
+                  setPendingDate(e.target.value);
+                  if (!isIOS && e.target.value) handleDateSelect(e.target.value);
+                }}
+                onBlur={(e) => {
+                  if (isIOS && e.target.value) handleDateSelect(e.target.value);
+                }}
                 className="mt-2"
               />
             </div>
@@ -506,9 +517,18 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
               id="custom-start-time"
               type="time"
               value={customStart}
-              onChange={(e) => setCustomStart(e.target.value)}
+              onChange={(e) => {
+                setCustomStart(e.target.value);
+                if (!isIOS && e.target.value) {
+                  if (isStartBlocked(e.target.value)) {
+                    toast.error("Это время уже занято");
+                  } else {
+                    setStartTime(e.target.value);
+                  }
+                }
+              }}
               onBlur={() => {
-                if (!customStart) return;
+                if (!isIOS || !customStart) return;
                 if (isStartBlocked(customStart)) {
                   toast.error("Это время уже занято");
                   setCustomStart("");
@@ -548,9 +568,23 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
               id="custom-end-time"
               type="time"
               value={customEnd}
-              onChange={(e) => setCustomEnd(e.target.value)}
+              onChange={(e) => {
+                setCustomEnd(e.target.value);
+                if (!isIOS && e.target.value) {
+                  const val = e.target.value;
+                  if (val <= startTime) {
+                    toast.error("Время окончания должно быть позже начала");
+                    return;
+                  }
+                  if (existingBookings.some((b) => b.startTime < val && b.endTime > startTime)) {
+                    toast.error("Это время уже занято");
+                    return;
+                  }
+                  onSelect(startTime, val);
+                }
+              }}
               onBlur={() => {
-                if (!customEnd) return;
+                if (!isIOS || !customEnd) return;
                 if (customEnd <= startTime) {
                   toast.error("Время окончания должно быть позже начала");
                   setCustomEnd("");
