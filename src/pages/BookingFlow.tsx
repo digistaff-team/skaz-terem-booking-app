@@ -79,30 +79,18 @@ const BookingFlow = () => {
     try {
       const now = new Date();
       const today = now.toISOString().split("T")[0];
-      const currentHour = now.getHours();
+      const startTime = now.toTimeString().slice(0, 5); // HH:MM текущего момента
 
-      // Определяем время начала (следующий полный час)
-      let startHour: number;
-      if (currentHour < 8) {
-        startHour = 8;
-      } else if (currentHour >= 21) {
-        toast.error("Сегодня уже нельзя забронировать — осталось менее часа до закрытия");
-        return;
-      } else {
-        startHour = currentHour + 1;
-      }
-
-      const startTime = `${startHour.toString().padStart(2, "0")}:00`;
-
-      // Проверяем, свободно ли хотя бы на 1 час
-      const oneHourEnd = `${(startHour + 1).toString().padStart(2, "0")}:00`;
-      const isFree = await isTimeSlotAvailable(selectedRoom.id, today, startTime, oneHourEnd);
+      // Проверяем, свободно ли хотя бы на 30 минут
+      const checkEnd = new Date(now.getTime() + 30 * 60 * 1000);
+      const checkEndTime = checkEnd.toTimeString().slice(0, 5);
+      const isFree = await isTimeSlotAvailable(selectedRoom.id, today, startTime, checkEndTime);
 
       if (!isFree) {
         // Занято — показываем конфликты
-        const conflicts = await getConflictingBookings(selectedRoom.id, today, startTime, "22:00");
+        const conflicts = await getConflictingBookings(selectedRoom.id, today, startTime, "24:00");
         setConflictingBookings(conflicts);
-        setConflictTime({ start: startTime, end: "22:00" });
+        setConflictTime({ start: startTime, end: "24:00" });
         setShowConflictDialog(true);
       } else {
         // Свободно — переходим к выбору времени окончания
