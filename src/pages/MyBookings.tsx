@@ -30,7 +30,7 @@ const MyBookings = () => {
     try {
       await cancelBooking(id, user?.id);
       await loadBookings();
-      toast.success("Бронирование отменено");
+      toast.error("Бронирование отменено");
     } catch (err: any) {
       toast.error("Ошибка при отмене: " + err.message);
     } finally {

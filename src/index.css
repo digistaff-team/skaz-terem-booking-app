@@ -83,11 +83,14 @@
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, sans-serif;
+    overscroll-behavior-y: none;
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 

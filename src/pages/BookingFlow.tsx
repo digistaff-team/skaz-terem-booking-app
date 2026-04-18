@@ -36,6 +36,7 @@ const BookingFlow = () => {
   const [conflictingBookings, setConflictingBookings] = useState<Booking[]>([]);
   const [conflictTime, setConflictTime] = useState({ start: "", end: "" });
   const [isCheckingNow, setIsCheckingNow] = useState(false);
+  const [pendingDate, setPendingDate] = useState("");
   const { user } = useAuth();
 
   // Проверяем, есть ли room в URL — сразу переходим к выбору даты
@@ -300,7 +301,9 @@ const BookingFlow = () => {
                 type="date"
                 min={new Date().toISOString().split("T")[0]}
                 max={(() => { const d = new Date(); d.setDate(d.getDate() + 90); return d.toISOString().split("T")[0]; })()}
-                onChange={(e) => handleDateSelect(e.target.value)}
+                value={pendingDate}
+                onChange={(e) => setPendingDate(e.target.value)}
+                onBlur={(e) => { if (e.target.value) handleDateSelect(e.target.value); }}
                 className="mt-2"
               />
             </div>
@@ -429,6 +432,7 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
 }) {
   const [startTime, setStartTime] = useState<string | null>(initialStartTime || null);
   const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
   const [existingBookings, setExistingBookings] = useState<import("@/types/booking").Booking[]>([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState(true);
 
@@ -502,14 +506,14 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
               id="custom-start-time"
               type="time"
               value={customStart}
-              onChange={(e) => {
-                setCustomStart(e.target.value);
-                if (e.target.value) {
-                  if (isStartBlocked(e.target.value)) {
-                    toast.error("Это время уже занято");
-                    return;
-                  }
-                  setStartTime(e.target.value);
+              onChange={(e) => setCustomStart(e.target.value)}
+              onBlur={() => {
+                if (!customStart) return;
+                if (isStartBlocked(customStart)) {
+                  toast.error("Это время уже занято");
+                  setCustomStart("");
+                } else {
+                  setStartTime(customStart);
                 }
               }}
               className="mt-2"
@@ -543,18 +547,21 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
             <Input
               id="custom-end-time"
               type="time"
-              onChange={(e) => {
-                const val = e.target.value;
-                if (!val) return;
-                if (val <= startTime) {
+              value={customEnd}
+              onChange={(e) => setCustomEnd(e.target.value)}
+              onBlur={() => {
+                if (!customEnd) return;
+                if (customEnd <= startTime) {
                   toast.error("Время окончания должно быть позже начала");
+                  setCustomEnd("");
                   return;
                 }
-                if (existingBookings.some((b) => b.startTime < val && b.endTime > startTime)) {
+                if (existingBookings.some((b) => b.startTime < customEnd && b.endTime > startTime)) {
                   toast.error("Это время уже занято");
+                  setCustomEnd("");
                   return;
                 }
-                onSelect(startTime, val);
+                onSelect(startTime, customEnd);
               }}
               className="mt-2"
             />
@@ -569,6 +576,22 @@ function DetailsStep({ onSubmit, userName }: { onSubmit: (title: string, desc: s
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [name, setName] = useState(userName);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const handler = () => {
+      const offset = window.innerHeight - vv.height - vv.offsetTop;
+      setKeyboardOffset(offset > 0 ? offset : 0);
+    };
+    vv.addEventListener("resize", handler);
+    vv.addEventListener("scroll", handler);
+    return () => {
+      vv.removeEventListener("resize", handler);
+      vv.removeEventListener("scroll", handler);
+    };
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -580,7 +603,7 @@ function DetailsStep({ onSubmit, userName }: { onSubmit: (title: string, desc: s
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} style={{ paddingBottom: keyboardOffset }}>
       <h2 className="mb-6 text-2xl font-bold text-foreground">Детали бронирования</h2>
       <div className="space-y-4">
         <div>
