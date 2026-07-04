@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project Location
+
+The app lives in the `skaz-terem-booking-app/` subdirectory, not at the repo root (`C:\Projects\SkazTerem_Bot`). Run all npm/git commands from inside `skaz-terem-booking-app/` — the git repository, `package.json`, and this file are all there, not in the parent folder.
+
 ## Commands
 
 ```bash
@@ -41,6 +45,9 @@ Protected routes (`/book`, `/bookings`) redirect unauthenticated users to `/`. T
 - On confirm, title is stored as `{roomName} | {eventTitle} | {userName}`.
 - After writing to Supabase, `syncBookingToGoogleCalendar()` is called (fire-and-forget, never throws).
 - Users can enter arbitrary start/end times via `<input type="time">` in addition to hourly slot buttons.
+- **Booking horizon limit:** the latest bookable date is configured in `src/config/bookingLimits.ts` — either `{ mode: "days", days: N }` (N days ahead of today) or `{ mode: "fixed", date: "YYYY-MM-DD" }` (fixed cutoff, inclusive). Overridable via env vars `VITE_BOOKING_MAX_DATE` (takes priority) / `VITE_BOOKING_MAX_DAYS`. `getMaxBookingDate()` feeds both the date `<input max>` and the `handleDateSelect` guard; `getMaxDateErrorMessage()` builds the toast text. Default is 90 days.
+- **iOS input handling:** `isIOS` constant (top of file, detects iPhone/iPad via `navigator.userAgent` + `maxTouchPoints`) gates `onChange` vs `onBlur` for all three date/time free-input fields. On iOS, `onChange` fires on every spinner scroll tick — only `onBlur` (fires on "Done") triggers step transitions. On desktop, `onChange` triggers immediately as before.
+- **Keyboard offset:** `DetailsStep` uses `window.visualViewport` resize/scroll events to compute `keyboardOffset` and applies it as `paddingBottom` on the form, keeping the "Далее" button above the iOS software keyboard.
 
 ### Pages
 
@@ -73,6 +80,8 @@ The Supabase client in `src/integrations/supabase/client.ts` uses a hardcoded an
 ### Styling
 
 Custom warm-amber theme in `src/index.css`. The `warm-glow` utility class is the page background on all routes. All UI components are from shadcn/ui in `src/components/ui/`. `DialogContent` accepts a `hideCloseButton` prop (added to `src/components/ui/dialog.tsx`) to suppress the default `×` button.
+
+**iOS global CSS fixes** (in `src/index.css`): `-webkit-tap-highlight-color: transparent` on `*` removes tap flash on buttons; `overscroll-behavior-y: none` on `body` prevents elastic bounce from triggering Telegram Mini App close gesture; `padding-bottom: env(safe-area-inset-bottom)` on `body` keeps content above the iPhone home indicator. Requires `viewport-fit=cover` in `index.html` meta viewport tag for safe-area env vars to work.
 
 ### Path Alias
 
