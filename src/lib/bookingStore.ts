@@ -219,7 +219,24 @@ export async function getConflictingBookings(
   return (data ?? []).map(mapRow);
 }
 
-function mapRow(row: any): Booking {
+// Строка таблицы bookings в Supabase (snake_case).
+// user_id и created_at опциональны — часть запросов выбирает не все колонки.
+interface BookingRow {
+  id: string;
+  room_id: string;
+  room_name: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  title: string;
+  description: string | null;
+  user_name: string;
+  user_id?: string | null;
+  status: Booking["status"];
+  created_at?: string | null;
+}
+
+function mapRow(row: BookingRow): Booking {
   return {
     id: row.id,
     roomId: row.room_id,
@@ -228,10 +245,10 @@ function mapRow(row: any): Booking {
     startTime: row.start_time,
     endTime: row.end_time,
     title: row.title,
-    description: row.description,
+    description: row.description ?? "",
     userName: row.user_name,
-    userId: row.user_id,
+    userId: row.user_id ?? undefined,
     status: row.status,
-    createdAt: row.created_at,
+    createdAt: row.created_at ?? "",
   };
 }

@@ -15,6 +15,8 @@ import {
 import { toast } from "sonner";
 import { ArrowLeft, CalendarDays, Clock, Home, Check, Zap } from "lucide-react";
 import { useAuth, getUserName } from "@/lib/auth";
+import { getMaxBookingDate, getMaxDateErrorMessage } from "@/config/bookingLimits";
+import { getErrorMessage } from "@/lib/utils";
 
 type Step = "room" | "date" | "time" | "details" | "confirm";
 
@@ -70,10 +72,8 @@ const BookingFlow = () => {
       toast.error("Эта дата в прошлом, выберите другую");
       return;
     }
-    const maxDate = new Date();
-    maxDate.setDate(maxDate.getDate() + 90);
-    if (date > maxDate.toISOString().split("T")[0]) {
-      toast.error("До этой даты более чем 90 дней, бронирование на неё пока закрыто. Пожалуйста, выберите дату в пределах 90 дней от сегодняшней даты.");
+    if (date > getMaxBookingDate()) {
+      toast.error(getMaxDateErrorMessage());
       return;
     }
     setFormData((p) => ({ ...p, date }));
@@ -108,8 +108,8 @@ const BookingFlow = () => {
         }));
         setStep("time");
       }
-    } catch (err: any) {
-      toast.error("Ошибка при проверке: " + err.message);
+    } catch (err) {
+      toast.error("Ошибка при проверке: " + getErrorMessage(err));
     } finally {
       setIsCheckingNow(false);
     }
@@ -153,10 +153,15 @@ const BookingFlow = () => {
         userName: formData.userName || getUserName(user),
       }, user?.id);
 
-      toast.success("Помещение успешно забронировано!");
+      const isSecondFloor = selectedRoom.floor === "2 этаж" || selectedRoom.floor === "Оба этажа";
+      toast.success(
+        isSecondFloor
+          ? "Помещение успешно забронировано!\nКод от ключницы - 2481"
+          : "Помещение успешно забронировано!"
+      );
       navigate("/bookings");
-    } catch (err: any) {
-      toast.error("Ошибка при бронировании: " + err.message);
+    } catch (err) {
+      toast.error("Ошибка при бронировании: " + getErrorMessage(err));
       setIsBooking(false);
     }
   };
@@ -306,7 +311,7 @@ const BookingFlow = () => {
                 id="custom-date"
                 type="date"
                 min={new Date().toISOString().split("T")[0]}
-                max={(() => { const d = new Date(); d.setDate(d.getDate() + 90); return d.toISOString().split("T")[0]; })()}
+                max={getMaxBookingDate()}
                 value={pendingDate}
                 onChange={(e) => {
                   setPendingDate(e.target.value);
@@ -518,12 +523,13 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
               type="time"
               value={customStart}
               onChange={(e) => {
-                setCustomStart(e.target.value);
-                if (!isIOS && e.target.value) {
-                  if (isStartBlocked(e.target.value)) {
+                const val = e.target.value;
+                setCustomStart(val);
+                if (!isIOS && val && val.split(":")[1] !== "00") {
+                  if (isStartBlocked(val)) {
                     toast.error("Это время уже занято");
                   } else {
-                    setStartTime(e.target.value);
+                    setStartTime(val);
                   }
                 }
               }}
@@ -569,9 +575,9 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
               type="time"
               value={customEnd}
               onChange={(e) => {
-                setCustomEnd(e.target.value);
-                if (!isIOS && e.target.value) {
-                  const val = e.target.value;
+                const val = e.target.value;
+                setCustomEnd(val);
+                if (!isIOS && val && val.split(":")[1] !== "00") {
                   if (val <= startTime) {
                     toast.error("Время окончания должно быть позже начала");
                     return;

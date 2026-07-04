@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { Booking } from "@/types/booking";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/utils";
 import { ArrowLeft, CalendarDays, Home, Trash2 } from "lucide-react";
 
 const MyBookings = () => {
@@ -31,8 +32,8 @@ const MyBookings = () => {
       await cancelBooking(id, user?.id);
       await loadBookings();
       toast.error("Бронирование отменено");
-    } catch (err: any) {
-      toast.error("Ошибка при отмене: " + err.message);
+    } catch (err) {
+      toast.error("Ошибка при отмене: " + getErrorMessage(err));
     } finally {
       setCancellingId(null);
     }
