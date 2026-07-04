@@ -15,7 +15,7 @@ export type BookingLimit =
   | { mode: "fixed"; date: string };
 
 // Значение по умолчанию. Измените здесь, если не используете переменные окружения.
-const DEFAULT_LIMIT: BookingLimit = { mode: "days", days: 90 };
+const DEFAULT_LIMIT: BookingLimit = { mode: "fixed", date: "2026-07-12" };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
