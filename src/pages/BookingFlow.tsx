@@ -82,10 +82,14 @@ const BookingFlow = () => {
 
   const handleNowSelect = async () => {
     if (!selectedRoom) return;
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    if (today > getMaxBookingDate()) {
+      toast.error(getMaxDateErrorMessage());
+      return;
+    }
     setIsCheckingNow(true);
     try {
-      const now = new Date();
-      const today = now.toISOString().split("T")[0];
       const startTime = now.toTimeString().slice(0, 5); // HH:MM текущего момента
 
       // Проверяем, свободно ли хотя бы на 30 минут
