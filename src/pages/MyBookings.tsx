@@ -1,54 +1,39 @@
-import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getActiveBookings, cancelBooking } from "@/lib/bookingStore";
 import { useAuth } from "@/lib/auth";
-import { Booking } from "@/types/booking";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/utils";
+import { formatDateShort } from "@/lib/dates";
+import { parseEventTitle } from "@/lib/booking";
 import { ArrowLeft, CalendarDays, Home, Trash2 } from "lucide-react";
 
 const MyBookings = () => {
   const { user } = useAuth();
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const loadBookings = async () => {
-    setIsLoading(true);
-    const data = await getActiveBookings(user?.id);
-    setBookings(data);
-    setIsLoading(false);
-  };
+  const { data: bookings = [], isLoading } = useQuery({
+    queryKey: ["myBookings", user?.id],
+    queryFn: () => getActiveBookings(user?.id),
+  });
 
-  useEffect(() => {
-    loadBookings();
-  }, [user?.id]);
-
-  const handleCancel = async (id: string) => {
-    setCancellingId(id);
-    toast.info("Удаляю ваше бронирование...");
-    try {
-      await cancelBooking(id);
-      await loadBookings();
-      toast.error("Бронирование отменено");
-    } catch (err) {
+  const cancelMutation = useMutation({
+    mutationFn: (id: string) => cancelBooking(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["myBookings"] });
+      toast.success("Бронирование отменено");
+    },
+    onError: (err) => {
       toast.error("Ошибка при отмене: " + getErrorMessage(err));
-    } finally {
-      setCancellingId(null);
-    }
-  };
+    },
+  });
 
-  const formatDate = (d: string) => {
-    const date = new Date(d + "T12:00:00");
-    const dayMonth = date.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
-    const weekday = date.toLocaleDateString("ru-RU", { weekday: "long" });
-    return `${dayMonth}, ${weekday}`;
-  };
+  const cancellingId = cancelMutation.isPending ? (cancelMutation.variables as string) : null;
 
-  const parseEventTitle = (title: string) => {
-    const parts = title.split(" | ");
-    return parts.length >= 2 ? parts[1] : title;
+  const handleCancel = (id: string) => {
+    toast.info("Удаляю ваше бронирование...");
+    cancelMutation.mutate(id);
   };
 
   return (
@@ -86,12 +71,12 @@ const MyBookings = () => {
                   <h3 className={`font-semibold text-base transition-colors duration-300 ${
                     cancellingId === b.id ? "text-muted-foreground" : "text-foreground"
                   }`}>
-                    <span className="block">{formatDate(b.date)}</span>
+                    <span className="block">{formatDateShort(b.date)}</span>
                     <span className="block">{b.startTime} — {b.endTime}</span>
                   </h3>
                   <button
                     onClick={() => handleCancel(b.id)}
-                    disabled={cancellingId !== null}
+                    disabled={cancelMutation.isPending}
                     className={`transition-colors p-1 shrink-0 ${
                       cancellingId === b.id
                         ? "text-muted-foreground cursor-not-allowed"

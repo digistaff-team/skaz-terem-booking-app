@@ -8,7 +8,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import Index from "./pages/Index.tsx";
 
 // Главная грузится сразу, остальные страницы — отдельными чанками по требованию
-const BookingFlow = lazy(() => import("./pages/BookingFlow.tsx"));
+const BookingFlow = lazy(() => import("./pages/booking/BookingFlow.tsx"));
 const MyBookings = lazy(() => import("./pages/MyBookings.tsx"));
 const Schedule = lazy(() => import("./pages/Schedule.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));

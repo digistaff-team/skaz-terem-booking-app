@@ -9,19 +9,7 @@ import { ChevronLeft, CalendarDays } from "lucide-react";
 import { ru } from "date-fns/locale";
 import { format, addDays } from "date-fns";
 import { toLocalISODate as toISODate, currentTimeHHMM } from "@/lib/dates";
-
-function formatDisplayDate(dateStr: string): string {
-  const today = toISODate(new Date());
-  const tomorrow = toISODate(addDays(new Date(), 1));
-  if (dateStr === today) return "Сегодня";
-  if (dateStr === tomorrow) return "Завтра";
-  return format(new Date(dateStr), "d MMMM", { locale: ru });
-}
-
-function parseEventTitle(title: string): string {
-  const parts = title.split(" | ");
-  return parts.length >= 2 ? parts[1] : title;
-}
+import { parseEventTitle } from "@/lib/booking";
 
 const Schedule = () => {
   const navigate = useNavigate();

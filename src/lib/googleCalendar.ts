@@ -32,7 +32,7 @@ export async function syncBookingToGoogleCalendar(
   const payload: GoogleCalendarPayload = {
     action: booking.status === "cancelled" ? "delete" : "create",
     calendarId: room.calendarId,
-    summary: `${booking.title}`,
+    summary: formatCalendarSummary(booking),
     description: generateDescription(booking),
     date: booking.date,
     startTime: booking.startTime,
@@ -98,6 +98,15 @@ export async function cancelBookingInGoogleCalendar(
   } catch (error) {
     console.error("Failed to remove booking from Google Calendar:", error);
   }
+}
+
+/**
+ * В Google Calendar заголовок события остаётся составным ("{помещение} | {мероприятие}
+ * | {ответственный}"), как и раньше — но теперь эта строка собирается только здесь,
+ * для отображения в календаре. В Supabase booking.title хранится чистым названием мероприятия.
+ */
+function formatCalendarSummary(booking: Booking): string {
+  return `${booking.roomName} | ${booking.title} | ${booking.userName}`;
 }
 
 function generateDescription(booking: Booking): string {

@@ -24,3 +24,27 @@ export function localISODateInDays(days: number): string {
 export function currentTimeHHMM(d: Date = new Date()): string {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+
+/** Парсит YYYY-MM-DD как локальную дату в полдень — избегает сдвига на день
+ * из-за часового пояса, который даёт `new Date("YYYY-MM-DD")` (парсится как UTC-полночь). */
+export function parseLocalDate(isoDate: string): Date {
+  return new Date(`${isoDate}T12:00:00`);
+}
+
+/** Например: «суббота, 18 июля 2026 г.» */
+export function formatDateLong(isoDate: string): string {
+  return parseLocalDate(isoDate).toLocaleDateString("ru-RU", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+/** Например: «18 июля, суббота» */
+export function formatDateShort(isoDate: string): string {
+  const d = parseLocalDate(isoDate);
+  const dayMonth = d.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+  const weekday = d.toLocaleDateString("ru-RU", { weekday: "long" });
+  return `${dayMonth}, ${weekday}`;
+}

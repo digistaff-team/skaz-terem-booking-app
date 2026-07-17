@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { rooms } from "@/data/rooms";
 import { Room, BookingFormData, Booking } from "@/types/booking";
-import { addBooking, isTimeSlotAvailable, getConflictingBookings, getActiveBookingsForRoomDate } from "@/lib/bookingStore";
+import { addBooking, isTimeSlotAvailable, getConflictingBookings } from "@/lib/bookingStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,22 +18,10 @@ import { ArrowLeft, CalendarDays, Clock, Home, Check, Zap } from "lucide-react";
 import { useAuth, getUserName } from "@/lib/auth";
 import { getMaxBookingDate, getMaxDateErrorMessage } from "@/config/bookingLimits";
 import { getErrorMessage } from "@/lib/utils";
-import { toLocalISODate, localISODateInDays, currentTimeHHMM } from "@/lib/dates";
-
-type Step = "room" | "date" | "time" | "details" | "confirm";
-
-// На iOS нативный date/time спиннер вызывает onChange при каждом повороте колеса,
-// поэтому для iOS используем onBlur (срабатывает только после нажатия «Готово»).
-const isIOS =
-  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-
-const TIME_SLOTS = Array.from({ length: 24 }, (_, i) =>
-  `${i.toString().padStart(2, "0")}:00`
-);
-
-// Слоты окончания: те же 24 + 24:00 для бронирований до полуночи
-const END_TIME_SLOTS = [...TIME_SLOTS, "24:00"];
+import { toLocalISODate, localISODateInDays, currentTimeHHMM, formatDateLong } from "@/lib/dates";
+import { STEP_ORDER, isIOS, type Step } from "./constants";
+import { TimeStep } from "./TimeStep";
+import { DetailsStep } from "./DetailsStep";
 
 const BookingFlow = () => {
   const navigate = useNavigate();
@@ -40,13 +29,20 @@ const BookingFlow = () => {
   const [step, setStep] = useState<Step>("room");
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [formData, setFormData] = useState<Partial<BookingFormData>>({});
-  const [isBooking, setIsBooking] = useState(false);
   const [showConflictDialog, setShowConflictDialog] = useState(false);
   const [conflictingBookings, setConflictingBookings] = useState<Booking[]>([]);
   const [conflictTime, setConflictTime] = useState({ start: "", end: "" });
   const [isCheckingNow, setIsCheckingNow] = useState(false);
   const [pendingDate, setPendingDate] = useState("");
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const bookMutation = useMutation({
+    mutationFn: (payload: Omit<Booking, "id" | "createdAt" | "status">) => addBooking(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["myBookings"] });
+    },
+  });
 
   // Проверяем, есть ли room в URL — сразу переходим к выбору даты
   useEffect(() => {
@@ -138,21 +134,16 @@ const BookingFlow = () => {
 
   const handleConfirm = async () => {
     if (!selectedRoom || !formData.date || !formData.startTime || !formData.endTime || !formData.title || !formData.userName) return;
-    if (isBooking) return;
-
-    setIsBooking(true);
+    if (bookMutation.isPending) return;
 
     try {
-      // Формируем название в формате: {помещение}|{мероприятие}|{пользователь}
-      const formattedTitle = `${selectedRoom.name} | ${formData.title} | ${formData.userName}`;
-
-      await addBooking({
+      await bookMutation.mutateAsync({
         roomId: selectedRoom.id,
         roomName: selectedRoom.name,
         date: formData.date,
         startTime: formData.startTime,
         endTime: formData.endTime,
-        title: formattedTitle,
+        title: formData.title,
         description: formData.description || "",
         userName: formData.userName || getUserName(user),
       });
@@ -166,15 +157,13 @@ const BookingFlow = () => {
       navigate("/bookings");
     } catch (err) {
       toast.error("Ошибка при бронировании: " + getErrorMessage(err));
-      setIsBooking(false);
     }
   };
 
   const goBack = () => {
-    const steps: Step[] = ["room", "date", "time", "details", "confirm"];
-    const idx = steps.indexOf(step);
+    const idx = STEP_ORDER.indexOf(step);
     if (idx > 0) {
-      const prevStep = steps[idx - 1];
+      const prevStep = STEP_ORDER[idx - 1];
       if (step === "time" || prevStep === "time") {
         setFormData(p => ({ ...p, startTime: "", endTime: "" }));
       }
@@ -182,15 +171,6 @@ const BookingFlow = () => {
     } else {
       navigate("/");
     }
-  };
-
-  const formatDate = (d: string) => {
-    return new Date(d + "T12:00:00").toLocaleDateString("ru-RU", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
   };
 
   return (
@@ -201,10 +181,10 @@ const BookingFlow = () => {
             <ArrowLeft className="h-4 w-4" /> Назад
           </button>
           <div className="flex items-center gap-2 mb-6">
-            {["room", "date", "time", "details", "confirm"].map((s, i) => (
+            {STEP_ORDER.map((s, i) => (
               <div key={s} className="flex items-center gap-2">
                 <div className={`h-2 w-8 rounded-full transition-colors ${
-                  ["room", "date", "time", "details", "confirm"].indexOf(step) >= i
+                  STEP_ORDER.indexOf(step) >= i
                     ? "bg-primary"
                     : "bg-border"
                 }`} />
@@ -302,7 +282,6 @@ const BookingFlow = () => {
           roomId={selectedRoom!.id}
           roomName={selectedRoom!.name}
           roomIcon={selectedRoom!.icon}
-          formatDate={formatDate}
           onSelect={handleTimeSelect}
           initialStartTime={formData.startTime || null}
         />}
@@ -326,7 +305,7 @@ const BookingFlow = () => {
                 <CalendarDays className="h-5 w-5 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Дата</p>
-                  <p className="font-semibold text-foreground">{formatDate(formData.date!)}</p>
+                  <p className="font-semibold text-foreground">{formatDateLong(formData.date!)}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -350,9 +329,9 @@ const BookingFlow = () => {
               onClick={handleConfirm}
               className="w-full"
               size="lg"
-              disabled={isBooking}
+              disabled={bookMutation.isPending}
             >
-              {isBooking ? (
+              {bookMutation.isPending ? (
                 <span className="animate-pulse">
                   Бронирую {selectedRoom.name}...
                 </span>
@@ -407,232 +386,5 @@ const BookingFlow = () => {
     </div>
   );
 };
-
-function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, initialStartTime }: {
-  date: string;
-  roomId: string;
-  roomName: string;
-  roomIcon: string;
-  formatDate: (d: string) => string;
-  onSelect: (start: string, end: string) => void;
-  initialStartTime?: string | null;
-}) {
-  const [startTime, setStartTime] = useState<string | null>(initialStartTime || null);
-  const [customStart, setCustomStart] = useState("");
-  const [customEnd, setCustomEnd] = useState("");
-  const [existingBookings, setExistingBookings] = useState<import("@/types/booking").Booking[]>([]);
-  const [isLoadingBookings, setIsLoadingBookings] = useState(true);
-
-  useEffect(() => {
-    setIsLoadingBookings(true);
-    getActiveBookingsForRoomDate(roomId, date).then((bookings) => {
-      setExistingBookings(bookings);
-      setIsLoadingBookings(false);
-    });
-  }, [roomId, date]);
-
-  // Слот начала заблокирован, если он попадает внутрь уже существующей брони
-  const isStartBlocked = (t: string) =>
-    existingBookings.some((b) => b.startTime <= t && t < b.endTime);
-
-  // Доступные слоты окончания — клиентская фильтрация без лишних запросов
-  const getAvailableEndSlots = (start: string) =>
-    END_TIME_SLOTS.filter(
-      (e) => e > start && !existingBookings.some((b) => b.startTime < e && b.endTime > start)
-    );
-
-  const availableEndSlots = startTime ? getAvailableEndSlots(startTime) : [];
-
-  return (
-    <div>
-      <h2 className="mb-1 text-2xl font-bold text-foreground">
-        <Clock className="inline h-6 w-6 mr-2" />
-        {startTime ? "Время окончания" : "Время начала"}
-      </h2>
-      <p className="mb-2 text-lg font-semibold text-primary">{roomIcon} {roomName}</p>
-      <p className="mb-6 text-muted-foreground">{formatDate(date)}</p>
-
-      {isLoadingBookings ? (
-        <p className="text-sm text-muted-foreground animate-pulse">⏳ Загружаю расписание...</p>
-      ) : !startTime ? (
-        <>
-          <div className="grid grid-cols-3 gap-2 mb-6">
-            {(() => {
-              const today = toLocalISODate();
-              const isToday = date === today;
-              const currentHour = new Date().getHours();
-              const visibleSlots = (isToday
-                ? TIME_SLOTS.filter((t) => parseInt(t) > currentHour)
-                : TIME_SLOTS
-              ).filter((t) => !isStartBlocked(t));
-
-              if (visibleSlots.length === 0) {
-                return (
-                  <div className="col-span-3 text-center py-6 text-muted-foreground">
-                    <p>На этот день нет свободного времени</p>
-                  </div>
-                );
-              }
-
-              return visibleSlots.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setStartTime(t)}
-                  className="rounded-lg border border-border bg-card px-3 py-3 text-center font-medium text-foreground transition-all hover:border-primary/50 hover:bg-primary/5"
-                >
-                  {t}
-                </button>
-              ));
-            })()}
-          </div>
-          <div>
-            <Label htmlFor="custom-start-time" className="text-sm text-muted-foreground">
-              Или выберите другое время
-            </Label>
-            <Input
-              id="custom-start-time"
-              type="time"
-              value={customStart}
-              onChange={(e) => {
-                const val = e.target.value;
-                setCustomStart(val);
-                if (!isIOS && val && val.split(":")[1] !== "00") {
-                  if (isStartBlocked(val)) {
-                    toast.error("Это время уже занято");
-                  } else {
-                    setStartTime(val);
-                  }
-                }
-              }}
-              onBlur={() => {
-                if (!isIOS || !customStart) return;
-                if (isStartBlocked(customStart)) {
-                  toast.error("Это время уже занято");
-                  setCustomStart("");
-                } else {
-                  setStartTime(customStart);
-                }
-              }}
-              className="mt-2"
-            />
-          </div>
-        </>
-      ) : (
-        <div>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Начало: <span className="font-semibold text-foreground">{startTime}</span>
-            <button onClick={() => setStartTime(null)} className="ml-2 text-primary hover:underline">изменить</button>
-          </p>
-          <div className="grid grid-cols-3 gap-2 mb-6">
-            {availableEndSlots.map((t) => (
-              <button
-                key={t}
-                onClick={() => onSelect(startTime, t)}
-                className="rounded-lg border border-border bg-card px-3 py-3 text-center font-medium text-foreground transition-all hover:border-primary/50 hover:bg-primary/5"
-              >
-                {t}
-              </button>
-            ))}
-            {availableEndSlots.length === 0 && (
-              <p className="col-span-3 text-sm text-muted-foreground">Нет доступных слотов после {startTime}</p>
-            )}
-          </div>
-          <div>
-            <Label htmlFor="custom-end-time" className="text-sm text-muted-foreground">
-              Или выберите другое время
-            </Label>
-            <Input
-              id="custom-end-time"
-              type="time"
-              value={customEnd}
-              onChange={(e) => {
-                const val = e.target.value;
-                setCustomEnd(val);
-                if (!isIOS && val && val.split(":")[1] !== "00") {
-                  if (val <= startTime) {
-                    toast.error("Время окончания должно быть позже начала");
-                    return;
-                  }
-                  if (existingBookings.some((b) => b.startTime < val && b.endTime > startTime)) {
-                    toast.error("Это время уже занято");
-                    return;
-                  }
-                  onSelect(startTime, val);
-                }
-              }}
-              onBlur={() => {
-                if (!isIOS || !customEnd) return;
-                if (customEnd <= startTime) {
-                  toast.error("Время окончания должно быть позже начала");
-                  setCustomEnd("");
-                  return;
-                }
-                if (existingBookings.some((b) => b.startTime < customEnd && b.endTime > startTime)) {
-                  toast.error("Это время уже занято");
-                  setCustomEnd("");
-                  return;
-                }
-                onSelect(startTime, customEnd);
-              }}
-              className="mt-2"
-            />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DetailsStep({ onSubmit, userName }: { onSubmit: (title: string, desc: string, name: string) => void; userName: string }) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [name, setName] = useState(userName);
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
-
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const handler = () => {
-      const offset = window.innerHeight - vv.height - vv.offsetTop;
-      setKeyboardOffset(offset > 0 ? offset : 0);
-    };
-    vv.addEventListener("resize", handler);
-    vv.addEventListener("scroll", handler);
-    return () => {
-      vv.removeEventListener("resize", handler);
-      vv.removeEventListener("scroll", handler);
-    };
-  }, []);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) {
-      toast.error("Введите название мероприятия");
-      return;
-    }
-    onSubmit(title.trim(), description.trim(), name.trim());
-  };
-
-  return (
-    <form onSubmit={handleSubmit} style={{ paddingBottom: keyboardOffset }}>
-      <h2 className="mb-6 text-2xl font-bold text-foreground">Детали бронирования</h2>
-      <div className="space-y-4">
-        <div>
-          <Label htmlFor="title">Название мероприятия *</Label>
-          <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Например: Мастер-класс по живописи" className="mt-1.5" />
-        </div>
-        <div>
-          <Label htmlFor="desc">Описание</Label>
-          <Input id="desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Краткое описание (необязательно)" className="mt-1.5" />
-        </div>
-        <div>
-          <Label htmlFor="name">Ваше имя (ответственный)</Label>
-          <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="mt-1.5" />
-        </div>
-        <Button type="submit" className="w-full" size="lg">Далее</Button>
-      </div>
-    </form>
-  );
-}
 
 export default BookingFlow;
