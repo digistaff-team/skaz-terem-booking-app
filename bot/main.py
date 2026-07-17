@@ -2,9 +2,9 @@
 Telegram Bot для авторизации пользователей Сказочного Терема.
 
 При /start бот:
-1. Проверяет, подписан ли пользователь на канал -1003507317011
-2. Если подписан — сохраняет в Supabase и шлёт ссылку для входа
-3. Если не подписан — просит подписаться
+1. Проверяет, состоит ли пользователь в закрытой группе -1003507317011
+2. Если состоит — сохраняет в Supabase и шлёт ссылку для входа
+3. Если не состоит — просит вступить
 
 Зависимости:
   pip install aiogram supabase python-dotenv
@@ -26,10 +26,11 @@ load_dotenv()
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://aveitrccxqbjfxysogiv.supabase.co")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")  # Service role key для записи
-CHANNEL_ID = "-1003507317011"
+GROUP_ID = "-1003507317011"
 APP_URL = os.getenv("APP_URL", "https://skaz-terem-booking.vercel.app")
-# Публичная ссылка-приглашение на канал (задайте в .env)
-CHANNEL_INVITE_URL = os.getenv("CHANNEL_INVITE_URL", "")
+# Пригласительная ссылка на закрытую группу (задайте в .env) —
+# в приватной группе её нужно сгенерировать заранее, обычной ссылки-username нет
+GROUP_INVITE_URL = os.getenv("GROUP_INVITE_URL", "")
 
 if not BOT_TOKEN:
     raise ValueError("TELEGRAM_BOT_TOKEN not set in .env")
@@ -43,10 +44,10 @@ dp = Dispatcher()
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
-async def is_subscribed(chat_id: int) -> bool:
-    """Проверяет, подписан ли пользователь на канал."""
+async def is_member(chat_id: int) -> bool:
+    """Проверяет, состоит ли пользователь в закрытой группе."""
     try:
-        member = await bot.get_chat_member(CHANNEL_ID, chat_id)
+        member = await bot.get_chat_member(GROUP_ID, chat_id)
         return member.status in ("member", "administrator", "creator")
     except Exception as e:
         logger.error(f"Error checking subscription for {chat_id}: {e}")
@@ -93,17 +94,17 @@ async def cmd_start(message: types.Message):
     first_name = message.from_user.first_name
     last_name = message.from_user.last_name
 
-    # Проверяем подписку на канал
-    if not await is_subscribed(chat_id):
-        channel_line = (
-            f"{CHANNEL_INVITE_URL}\n\n" if CHANNEL_INVITE_URL
-            else "(ссылку на канал можно получить у куратора)\n\n"
+    # Проверяем членство в закрытой группе
+    if not await is_member(chat_id):
+        group_line = (
+            f"{GROUP_INVITE_URL}\n\n" if GROUP_INVITE_URL
+            else "(ссылку для вступления можно получить у куратора)\n\n"
         )
         await message.answer(
             "🏡 Добро пожаловать в Сказочный Терем!\n\n"
-            "Для доступа к приложению необходимо подписаться на наш канал:\n"
-            + channel_line +
-            "После подписки нажмите /start ещё раз."
+            "Для доступа к приложению необходимо вступить в нашу закрытую группу:\n"
+            + group_line +
+            "После вступления нажмите /start ещё раз."
         )
         return
 
@@ -133,7 +134,7 @@ async def echo_all(message: types.Message):
     """Эхо для всех остальных сообщений."""
     await message.answer(
         "Нажмите /start для входа в приложение.\n\n"
-        "Если вы не подписаны на канал, подпишитесь и попробуйте снова."
+        "Если вы не состоите в нашей группе, вступите и попробуйте снова."
     )
 
 
