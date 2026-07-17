@@ -5,7 +5,7 @@ import { useAuth, getUserName } from "@/lib/auth";
 import { rooms } from "@/data/rooms";
 import { formatMinutes } from "@/lib/duration";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Phone, Wallet } from "lucide-react";
+import { ArrowLeft, Phone, Wallet, CircleDollarSign } from "lucide-react";
 
 const REASON_LABELS: Record<TransactionReason, string> = {
   topup: "Пополнение",
@@ -131,10 +131,17 @@ const Account = () => {
               )}
             </section>
 
-            <div className="mt-8">
-              <Link to="/book">
+            <div className="mt-8 space-y-3">
+              <Link to="/book" className="block">
                 <Button className="w-full" size="lg">Забронировать помещение</Button>
               </Link>
+              {user?.isAdmin && (
+                <Link to="/admin" className="block">
+                  <Button variant="outline" className="w-full gap-2" size="lg">
+                    <CircleDollarSign className="h-5 w-5" /> Начисление часов (админ)
+                  </Button>
+                </Link>
+              )}
             </div>
           </>
         )}

@@ -33,6 +33,7 @@ export interface Subscriber {
   lastName?: string;
   subscribedAt: string;
   isActive: boolean;
+  isAdmin: boolean;
 }
 
 // === Telegram Mini App ===
@@ -88,6 +89,7 @@ interface SubscriberRow {
   last_name: string | null;
   subscribed_at: string;
   is_active: boolean;
+  is_admin?: boolean;
 }
 
 function mapSubscriberRow(row: SubscriberRow): Subscriber {
@@ -99,6 +101,7 @@ function mapSubscriberRow(row: SubscriberRow): Subscriber {
     lastName: row.last_name ?? undefined,
     subscribedAt: row.subscribed_at,
     isActive: row.is_active,
+    isAdmin: row.is_admin ?? false,
   };
 }
 

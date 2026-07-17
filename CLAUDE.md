@@ -66,6 +66,7 @@ Protected routes (`/book`, `/bookings`) redirect unauthenticated users to `/`. T
 - `/bookings` — `MyBookings.tsx`: user's active bookings with cancel (protected). Uses `useQuery(["myBookings", userId])` + `useMutation` for cancel; `cancellingId` (for the per-row blur/disable animation) is derived from `cancelMutation.isPending ? cancelMutation.variables : null` rather than separate state.
 - `/schedule` — `Schedule.tsx`: read-only view of all bookings for a selected date, sorted by time.
 - `/account` — `Account.tsx`: personal cabinet (protected). Per-room hour balances (negative = долг, shown in red), top-up instructions (contact the curator), and the last 30 balance transactions. Data via `useQuery(["account"])` → `getAccount()` in `src/lib/accountStore.ts` → RPC `get_account(initData)`.
+- `/admin` — `Admin.tsx`: hour top-up form for admins only (`is_admin` flag; non-admins are redirected to `/account`, and the server enforces `ADMIN_ONLY` anyway). Native `<select>` elements styled like Input — the shadcn Select component was removed in the dependency cleanup.
 
 ### Data Layer
 
@@ -87,10 +88,12 @@ Users pre-pay for hours per room; bookings deduct from that deposit (see `supaba
 
 - `create_booking` deducts the exact duration inside the same transaction as the insert, and returns `charged_minutes`/`balance_after` alongside the booking row.
 - `cancel_booking` refunds the net sum of that booking's transactions (`refund_minutes` in the response). Legacy bookings created before the deposit system have no transactions → refund 0; double-refund is impossible (net becomes 0 after the first refund).
-- Top-up: the Telegram bot's `/hours` command (admins listed in `ADMIN_CHAT_IDS` env only) → RPC `admin_add_hours(chat_id, room_id, minutes, comment)`, which is granted **only to `service_role`** — the anon key cannot call it. Positive delta = `topup`, negative = `adjust`. The bot notifies the user about topups.
+- Top-up: the **admin section inside the Mini App** (`/admin`, see `supabase-migrations-4-admin.sql`). Subscribers get an `is_admin` flag (set manually: `UPDATE subscribers SET is_admin = TRUE WHERE chat_id = ...`); admins see a «Начисление часов» button in `/account`. RPCs `admin_list_users(initData)` and `admin_adjust_hours(initData, chat_id, room_id, minutes, comment)` verify the caller's initData **and** `is_admin` via `private.require_admin`; the admin's identity is appended to the transaction comment for audit. Positive delta = `topup`, negative = `adjust`.
+- `admin_add_hours(chat_id, ...)` (no initData) also exists, granted **only to `service_role`** — a manual/SQL fallback; the anon key cannot call it.
 - All balance changes go through `private.apply_balance_change` (atomic upsert-increment + a `balance_transactions` history row). Payment itself happens offline (via the curator); there is no payment integration.
-- `src/lib/duration.ts` — `timeToMinutes`/`durationMinutes`/`formatMinutes` («−1 ч 45 мин» formatting; the bot has a Python copy of `format_minutes`).
-- Room-id lists are duplicated in `admin_add_hours` (SQL), `create_booking` (SQL), and the bot's `ROOMS` dict — keep all in sync with `src/data/rooms.ts`.
+- `src/lib/duration.ts` — `timeToMinutes`/`durationMinutes`/`formatMinutes` («−1 ч 45 мин» formatting).
+- Room-id lists are duplicated in `admin_add_hours`/`admin_adjust_hours`/`create_booking` (SQL) — keep in sync with `src/data/rooms.ts`.
+- `src/lib/rpcErrors.ts` — the shared RPC error-code → Russian message map (`translateRpcError`), used by `bookingStore`/`adminStore`.
 
 ### Supabase Tables
 
@@ -104,6 +107,8 @@ The Supabase client in `src/integrations/supabase/client.ts` uses a hardcoded an
 ### Telegram Mini App
 
 `public/telegram-web-app.js` is a locally hosted copy of the Telegram SDK (avoids CDN loading failures). Loaded first in `index.html`. `src/main.tsx` calls `WebApp.ready()` and `WebApp.expand()` before React renders.
+
+**The production bot @SkazTerem_bot runs on the ProTalk service**, not on `bot/main.py` — that Python script is a reference/local fallback only. Never run it with the production bot token while ProTalk is active (Telegram allows one update consumer per token → 409 Conflict). ProTalk handles the /start flow (group membership check + app link); everything else (auth, booking, balances) is app ↔ Supabase directly.
 
 ### Styling
 

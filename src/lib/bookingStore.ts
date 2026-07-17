@@ -7,26 +7,7 @@ import {
 import { rooms } from "@/data/rooms";
 import { getInitData } from "./auth";
 import { toLocalISODate, currentTimeHHMM } from "./dates";
-
-// Коды исключений из RPC-функций (supabase-migrations-2-security.sql)
-const RPC_ERROR_MESSAGES: Record<string, string> = {
-  BOOKING_CONFLICT: "Это время уже занято, выберите другое",
-  AUTH_INVALID: "Не удалось подтвердить вашу личность. Переоткройте приложение через бота @SkazTerem_bot",
-  AUTH_EXPIRED: "Сессия устарела. Закройте и снова откройте приложение через бота @SkazTerem_bot",
-  AUTH_NOT_CONFIGURED: "Сервис временно недоступен, попробуйте позже",
-  INVALID_INPUT: "Некорректные данные бронирования, проверьте дату и время",
-  BOOKING_NOT_FOUND: "Бронирование не найдено или принадлежит другому пользователю",
-};
-
-function translateRpcError(message: string): string {
-  for (const [code, text] of Object.entries(RPC_ERROR_MESSAGES)) {
-    if (message.includes(code)) return text;
-  }
-  return message;
-}
-
-const NO_TELEGRAM_ERROR =
-  "Бронирование доступно только из Telegram. Откройте приложение через бота @SkazTerem_bot";
+import { translateRpcError, NO_TELEGRAM_ERROR } from "./rpcErrors";
 
 const WHOLE_HOUSE_ID = "whole-house";
 const ALL_ROOM_IDS = rooms.map((r) => r.id);

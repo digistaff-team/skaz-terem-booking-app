@@ -12,6 +12,7 @@ const BookingFlow = lazy(() => import("./pages/booking/BookingFlow.tsx"));
 const MyBookings = lazy(() => import("./pages/MyBookings.tsx"));
 const Schedule = lazy(() => import("./pages/Schedule.tsx"));
 const Account = lazy(() => import("./pages/Account.tsx"));
+const Admin = lazy(() => import("./pages/Admin.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 const queryClient = new QueryClient();
@@ -67,6 +68,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Account />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute>
+            <Admin />
           </ProtectedRoute>
         }
       />

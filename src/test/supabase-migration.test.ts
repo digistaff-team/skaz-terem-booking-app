@@ -29,6 +29,9 @@ const MIGRATION_PATH = fileURLToPath(
 const MIGRATION3_PATH = fileURLToPath(
   new URL("../../supabase-migrations-3-balance.sql", import.meta.url)
 );
+const MIGRATION4_PATH = fileURLToPath(
+  new URL("../../supabase-migrations-4-admin.sql", import.meta.url)
+);
 
 // Тестовый токен: подставляется в private.app_config вместо продового
 const BOT_TOKEN = "7654321098:AAtest_token_for_local_verification_x";
@@ -128,7 +131,7 @@ beforeAll(async () => {
   `);
 
   // GRANT/REVOKE опускаем: ролей anon/authenticated/service_role в PGlite нет
-  for (const path of [MIGRATION_PATH, MIGRATION3_PATH]) {
+  for (const path of [MIGRATION_PATH, MIGRATION3_PATH, MIGRATION4_PATH]) {
     const migration = readFileSync(path, "utf8")
       .split("\n")
       .filter((l) => !/^\s*(GRANT|REVOKE)\s/i.test(l))
@@ -422,5 +425,64 @@ describe("депозит часов (миграция 3)", () => {
     const byRoom = Object.fromEntries(r.rows[0].acc.balances.map((b) => [b.room_id, b.minutes]));
     expect(byRoom["floor-1-34"]).toBe(510);
     expect(byRoom["whole-house"]).toBe(120);
+  });
+
+  describe("админ-раздел (миграция 4)", () => {
+    it("auth_subscriber возвращает is_admin (по умолчанию false)", async () => {
+      const r = await db.query<{ s: Record<string, unknown> }>(
+        "SELECT public.auth_subscriber($1) AS s",
+        [olegInit]
+      );
+      expect(r.rows[0].s.is_admin).toBe(false);
+    });
+
+    it("не-админу admin_list_users и admin_adjust_hours недоступны", async () => {
+      await expectRpcError(
+        db.query("SELECT public.admin_list_users($1)", [olegInit]),
+        "ADMIN_ONLY"
+      );
+      await expectRpcError(
+        db.query("SELECT public.admin_adjust_hours($1,$2,$3,$4,$5)", [olegInit, 444555666, "floor-1-34", 60, null]),
+        "ADMIN_ONLY"
+      );
+    });
+
+    it("админ видит список пользователей с балансами", async () => {
+      await db.query("UPDATE subscribers SET is_admin = TRUE WHERE chat_id = 777888999");
+
+      const r = await db.query<{ u: { chat_id: number; balances: unknown[] }[] }>(
+        "SELECT public.admin_list_users($1) AS u",
+        [olegInit]
+      );
+      const users = r.rows[0].u;
+      expect(users.length).toBeGreaterThanOrEqual(3); // Иван, Мария, Олег
+      const olegRow = users.find((u) => u.chat_id === 777888999);
+      expect(olegRow).toBeDefined();
+      expect((olegRow!.balances as { room_id: string }[]).map((b) => b.room_id).sort())
+        .toEqual(["floor-1-34", "whole-house"]);
+    });
+
+    it("админ начисляет часы другому пользователю; в комментарии остаётся след аудита", async () => {
+      const r = await db.query<{ a: Record<string, unknown> }>(
+        "SELECT public.admin_adjust_hours($1,$2,$3,$4,$5) AS a",
+        [olegInit, 444555666, "floor-2-hall-20", 300, "оплата переводом"]
+      );
+      expect(r.rows[0].a.balance_minutes).toBeTypeOf("number");
+
+      const tx = await db.query<{ comment: string }>(
+        `SELECT comment FROM balance_transactions
+          WHERE reason = 'topup' AND room_id = 'floor-2-hall-20'
+          ORDER BY created_at DESC LIMIT 1`
+      );
+      expect(tx.rows[0].comment).toContain("оплата переводом");
+      expect(tx.rows[0].comment).toContain("админ: oleg_o");
+    });
+
+    it("начисление несуществующему пользователю → USER_NOT_FOUND", async () => {
+      await expectRpcError(
+        db.query("SELECT public.admin_adjust_hours($1,$2,$3,$4,$5)", [olegInit, 42, "floor-1-34", 60, null]),
+        "USER_NOT_FOUND"
+      );
+    });
   });
 });
