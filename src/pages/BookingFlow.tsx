@@ -17,6 +17,7 @@ import { ArrowLeft, CalendarDays, Clock, Home, Check, Zap } from "lucide-react";
 import { useAuth, getUserName } from "@/lib/auth";
 import { getMaxBookingDate, getMaxDateErrorMessage } from "@/config/bookingLimits";
 import { getErrorMessage } from "@/lib/utils";
+import { toLocalISODate, localISODateInDays, currentTimeHHMM } from "@/lib/dates";
 
 type Step = "room" | "date" | "time" | "details" | "confirm";
 
@@ -67,7 +68,7 @@ const BookingFlow = () => {
   };
 
   const handleDateSelect = (date: string) => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = toLocalISODate();
     if (date < today) {
       toast.error("Эта дата в прошлом, выберите другую");
       return;
@@ -83,18 +84,17 @@ const BookingFlow = () => {
   const handleNowSelect = async () => {
     if (!selectedRoom) return;
     const now = new Date();
-    const today = now.toISOString().split("T")[0];
+    const today = toLocalISODate(now);
     if (today > getMaxBookingDate()) {
       toast.error(getMaxDateErrorMessage());
       return;
     }
     setIsCheckingNow(true);
     try {
-      const startTime = now.toTimeString().slice(0, 5); // HH:MM текущего момента
+      const startTime = currentTimeHHMM(now);
 
       // Проверяем, свободно ли хотя бы на 30 минут
-      const checkEnd = new Date(now.getTime() + 30 * 60 * 1000);
-      const checkEndTime = checkEnd.toTimeString().slice(0, 5);
+      const checkEndTime = currentTimeHHMM(new Date(now.getTime() + 30 * 60 * 1000));
       const isFree = await isTimeSlotAvailable(selectedRoom.id, today, startTime, checkEndTime);
 
       if (!isFree) {
@@ -155,7 +155,7 @@ const BookingFlow = () => {
         title: formattedTitle,
         description: formData.description || "",
         userName: formData.userName || getUserName(user),
-      }, user?.id);
+      });
 
       const isSecondFloor = selectedRoom.floor === "2 этаж" || selectedRoom.floor === "Оба этажа";
       toast.success(
@@ -256,56 +256,23 @@ const BookingFlow = () => {
                 </p>
                 <p className="text-sm text-muted-foreground">Моментальная бронь</p>
               </button>
-              {/* Сегодня */}
-              {(() => {
+              {/* Сегодня / Завтра / Послезавтра */}
+              {(["Сегодня", "Завтра", "Послезавтра"] as const).map((label, offset) => {
                 const d = new Date();
-                const dateStr = d.toISOString().split("T")[0];
+                d.setDate(d.getDate() + offset);
                 return (
                   <button
-                    onClick={() => handleDateSelect(dateStr)}
+                    key={label}
+                    onClick={() => handleDateSelect(localISODateInDays(offset))}
                     className="rounded-xl border border-border bg-card p-4 text-left transition-all hover:shadow-md hover:border-primary/30"
                   >
-                    <p className="font-semibold text-foreground">Сегодня</p>
+                    <p className="font-semibold text-foreground">{label}</p>
                     <p className="text-sm text-muted-foreground">
                       {d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
                     </p>
                   </button>
                 );
-              })()}
-              {/* Завтра */}
-              {(() => {
-                const d = new Date();
-                d.setDate(d.getDate() + 1);
-                const dateStr = d.toISOString().split("T")[0];
-                return (
-                  <button
-                    onClick={() => handleDateSelect(dateStr)}
-                    className="rounded-xl border border-border bg-card p-4 text-left transition-all hover:shadow-md hover:border-primary/30"
-                  >
-                    <p className="font-semibold text-foreground">Завтра</p>
-                    <p className="text-sm text-muted-foreground">
-                      {d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
-                    </p>
-                  </button>
-                );
-              })()}
-              {/* Послезавтра */}
-              {(() => {
-                const d = new Date();
-                d.setDate(d.getDate() + 2);
-                const dateStr = d.toISOString().split("T")[0];
-                return (
-                  <button
-                    onClick={() => handleDateSelect(dateStr)}
-                    className="rounded-xl border border-border bg-card p-4 text-left transition-all hover:shadow-md hover:border-primary/30"
-                  >
-                    <p className="font-semibold text-foreground">Послезавтра</p>
-                    <p className="text-sm text-muted-foreground">
-                      {d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
-                    </p>
-                  </button>
-                );
-              })()}
+              })}
             </div>
             <div>
               <Label htmlFor="custom-date" className="text-sm text-muted-foreground">
@@ -314,7 +281,7 @@ const BookingFlow = () => {
               <Input
                 id="custom-date"
                 type="date"
-                min={new Date().toISOString().split("T")[0]}
+                min={toLocalISODate()}
                 max={getMaxBookingDate()}
                 value={pendingDate}
                 onChange={(e) => {
@@ -491,7 +458,7 @@ function TimeStep({ date, roomId, roomName, roomIcon, formatDate, onSelect, init
         <>
           <div className="grid grid-cols-3 gap-2 mb-6">
             {(() => {
-              const today = new Date().toISOString().split("T")[0];
+              const today = toLocalISODate();
               const isToday = date === today;
               const currentHour = new Date().getHours();
               const visibleSlots = (isToday

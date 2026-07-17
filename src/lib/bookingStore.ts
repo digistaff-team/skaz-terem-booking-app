@@ -5,6 +5,28 @@ import {
   cancelBookingInGoogleCalendar,
 } from "./googleCalendar";
 import { rooms } from "@/data/rooms";
+import { getInitData } from "./auth";
+import { toLocalISODate, currentTimeHHMM } from "./dates";
+
+// Коды исключений из RPC-функций (supabase-migrations-2-security.sql)
+const RPC_ERROR_MESSAGES: Record<string, string> = {
+  BOOKING_CONFLICT: "Это время уже занято, выберите другое",
+  AUTH_INVALID: "Не удалось подтвердить вашу личность. Переоткройте приложение через бота @SkazTerem_bot",
+  AUTH_EXPIRED: "Сессия устарела. Закройте и снова откройте приложение через бота @SkazTerem_bot",
+  AUTH_NOT_CONFIGURED: "Сервис временно недоступен, попробуйте позже",
+  INVALID_INPUT: "Некорректные данные бронирования, проверьте дату и время",
+  BOOKING_NOT_FOUND: "Бронирование не найдено или принадлежит другому пользователю",
+};
+
+function translateRpcError(message: string): string {
+  for (const [code, text] of Object.entries(RPC_ERROR_MESSAGES)) {
+    if (message.includes(code)) return text;
+  }
+  return message;
+}
+
+const NO_TELEGRAM_ERROR =
+  "Бронирование доступно только из Telegram. Откройте приложение через бота @SkazTerem_bot";
 
 const WHOLE_HOUSE_ID = "whole-house";
 const ALL_ROOM_IDS = rooms.map((r) => r.id);
@@ -36,7 +58,7 @@ export async function getBookings(userId?: string): Promise<Booking[]> {
 }
 
 export async function getActiveBookings(userId?: string): Promise<Booking[]> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = toLocalISODate();
   let query = supabase
     .from("bookings")
     .select("*")
@@ -56,8 +78,7 @@ export async function getActiveBookings(userId?: string): Promise<Booking[]> {
     return [];
   }
 
-  const now = new Date();
-  const currentTime = now.toTimeString().slice(0, 5);
+  const currentTime = currentTimeHHMM();
 
   return (data ?? [])
     .map(mapRow)
@@ -65,29 +86,28 @@ export async function getActiveBookings(userId?: string): Promise<Booking[]> {
 }
 
 export async function addBooking(
-  booking: Omit<Booking, "id" | "createdAt" | "status">,
-  userId?: string
+  booking: Omit<Booking, "id" | "createdAt" | "status">
 ): Promise<Booking> {
-  const { data, error } = await supabase
-    .from("bookings")
-    .insert({
-      room_id: booking.roomId,
-      room_name: booking.roomName,
-      date: booking.date,
-      start_time: booking.startTime,
-      end_time: booking.endTime,
-      title: booking.title,
-      description: booking.description,
-      user_name: booking.userName,
-      user_id: userId || null,
-      status: "active",
-    })
-    .select()
-    .single();
+  const initData = getInitData();
+  if (!initData) throw new Error(NO_TELEGRAM_ERROR);
 
-  if (error) throw new Error(error.message);
+  // Атомарная вставка: проверка конфликтов и запись происходят на сервере
+  // в одной транзакции — двойное бронирование невозможно.
+  const { data, error } = await supabase.rpc("create_booking", {
+    p_init_data: initData,
+    p_room_id: booking.roomId,
+    p_room_name: booking.roomName,
+    p_date: booking.date,
+    p_start_time: booking.startTime,
+    p_end_time: booking.endTime,
+    p_title: booking.title,
+    p_description: booking.description,
+    p_user_name: booking.userName,
+  });
 
-  const newBooking = mapRow(data);
+  if (error) throw new Error(translateRpcError(error.message));
+
+  const newBooking = mapRow(data as BookingRow);
 
   // Sync to Google Calendar
   await syncBookingToGoogleCalendar(newBooking);
@@ -95,42 +115,30 @@ export async function addBooking(
   return newBooking;
 }
 
-export async function cancelBooking(id: string, userId?: string): Promise<void> {
-  // Get booking data before cancelling
-  const { data: bookingData } = await supabase
-    .from("bookings")
-    .select("*")
-    .eq("id", id)
-    .single();
+export async function cancelBooking(id: string): Promise<void> {
+  const initData = getInitData();
+  if (!initData) throw new Error(NO_TELEGRAM_ERROR);
 
-  if (!bookingData) {
-    throw new Error("Бронирование не найдено");
-  }
+  // Сервер сам проверяет, что бронь принадлежит этому пользователю
+  const { data, error } = await supabase.rpc("cancel_booking", {
+    p_init_data: initData,
+    p_booking_id: id,
+  });
 
-  // Check ownership if userId provided
-  if (userId && bookingData.user_id !== userId) {
-    throw new Error("Вы можете отменить только своё бронирование");
-  }
-
-  const { error } = await supabase
-    .from("bookings")
-    .update({ status: "cancelled" })
-    .eq("id", id);
-
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(translateRpcError(error.message));
 
   // Remove from Google Calendar
-  if (bookingData) {
-    await cancelBookingInGoogleCalendar(id, bookingData.room_id);
+  const cancelled = data as BookingRow | null;
+  if (cancelled) {
+    await cancelBookingInGoogleCalendar(id, cancelled.room_id);
   }
 }
 
 export async function getCurrentBooking(
   roomId: string
 ): Promise<{ userName: string; title: string; endTime: string } | null> {
-  const now = new Date();
-  const today = now.toISOString().split("T")[0];
-  const currentTime = now.toTimeString().slice(0, 5);
+  const today = toLocalISODate();
+  const currentTime = currentTimeHHMM();
 
   const { data, error } = await supabase
     .from("bookings")

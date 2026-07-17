@@ -24,5 +24,6 @@ dist-ssr
 *.sw?
 .env.local
 bot/.env
+bot/__pycache__/
 docs/
 QWEN.md

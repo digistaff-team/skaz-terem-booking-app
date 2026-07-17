@@ -8,10 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ChevronLeft, CalendarDays } from "lucide-react";
 import { ru } from "date-fns/locale";
 import { format, addDays } from "date-fns";
-
-function toISODate(d: Date): string {
-  return format(d, "yyyy-MM-dd");
-}
+import { toLocalISODate as toISODate, currentTimeHHMM } from "@/lib/dates";
 
 function formatDisplayDate(dateStr: string): string {
   const today = toISODate(new Date());
@@ -37,7 +34,7 @@ const Schedule = () => {
   });
 
   const today = toISODate(new Date());
-  const currentTime = new Date().toTimeString().slice(0, 5);
+  const currentTime = currentTimeHHMM();
   const bookings = selectedDate === today
     ? rawBookings.filter((b) => b.endTime > currentTime)
     : rawBookings;

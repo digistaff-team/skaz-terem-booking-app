@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -5,12 +6,20 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import Index from "./pages/Index.tsx";
-import BookingFlow from "./pages/BookingFlow.tsx";
-import MyBookings from "./pages/MyBookings.tsx";
-import Schedule from "./pages/Schedule.tsx";
-import NotFound from "./pages/NotFound.tsx";
+
+// Главная грузится сразу, остальные страницы — отдельными чанками по требованию
+const BookingFlow = lazy(() => import("./pages/BookingFlow.tsx"));
+const MyBookings = lazy(() => import("./pages/MyBookings.tsx"));
+const Schedule = lazy(() => import("./pages/Schedule.tsx"));
+const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 const queryClient = new QueryClient();
+
+const PageLoader = () => (
+  <div className="min-h-screen warm-glow flex items-center justify-center">
+    <p className="text-muted-foreground animate-pulse">Загрузка...</p>
+  </div>
+);
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -31,9 +40,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 const AppRoutes = () => {
-  const { isAuthenticated } = useAuth();
-
   return (
+    <Suspense fallback={<PageLoader />}>
     <Routes>
       <Route path="/" element={<Index />} />
       <Route
@@ -55,6 +63,7 @@ const AppRoutes = () => {
       <Route path="/schedule" element={<Schedule />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </Suspense>
   );
 };
 

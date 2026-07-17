@@ -28,6 +28,8 @@ SUPABASE_URL = os.getenv("SUPABASE_URL", "https://aveitrccxqbjfxysogiv.supabase.
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")  # Service role key для записи
 CHANNEL_ID = "-1003507317011"
 APP_URL = os.getenv("APP_URL", "https://skaz-terem-booking.vercel.app")
+# Публичная ссылка-приглашение на канал (задайте в .env)
+CHANNEL_INVITE_URL = os.getenv("CHANNEL_INVITE_URL", "")
 
 if not BOT_TOKEN:
     raise ValueError("TELEGRAM_BOT_TOKEN not set in .env")
@@ -56,10 +58,18 @@ def save_subscriber(chat_id: int, username: str | None, first_name: str | None, 
     try:
         # Проверяем, есть ли уже
         result = supabase.table("subscribers").select("id").eq("chat_id", chat_id).execute()
-        
+
         if result.data:
-            return result.data[0]["id"]
-        
+            # Обновляем имя и реактивируем (мог отписаться и вернуться)
+            subscriber_id = result.data[0]["id"]
+            supabase.table("subscribers").update({
+                "username": username,
+                "first_name": first_name,
+                "last_name": last_name,
+                "is_active": True,
+            }).eq("id", subscriber_id).execute()
+            return subscriber_id
+
         # Создаём нового
         result = supabase.table("subscribers").insert({
             "chat_id": chat_id,
@@ -67,7 +77,7 @@ def save_subscriber(chat_id: int, username: str | None, first_name: str | None, 
             "first_name": first_name,
             "last_name": last_name,
         }).execute()
-        
+
         if result.data:
             return result.data[0]["id"]
         return None
@@ -85,10 +95,14 @@ async def cmd_start(message: types.Message):
 
     # Проверяем подписку на канал
     if not await is_subscribed(chat_id):
+        channel_line = (
+            f"{CHANNEL_INVITE_URL}\n\n" if CHANNEL_INVITE_URL
+            else "(ссылку на канал можно получить у куратора)\n\n"
+        )
         await message.answer(
             "🏡 Добро пожаловать в Сказочный Терем!\n\n"
             "Для доступа к приложению необходимо подписаться на наш канал:\n"
-            "https://t.me/+YOUR_CHANNEL_LINK\n\n"
+            + channel_line +
             "После подписки нажмите /start ещё раз."
         )
         return
@@ -102,14 +116,13 @@ async def cmd_start(message: types.Message):
         logger.error(f"Failed to save subscriber {chat_id}")
         return
 
-    # Генерируем ссылку для входа
-    auth_url = f"{APP_URL}/auth?token={subscriber_id}"
-    
+    # Страницы /auth больше нет: Mini App авторизуется сама по подписанной
+    # Telegram initData (проверка на сервере), токен в ссылке не нужен.
     await message.answer(
         f"✅ Добро пожаловать, {first_name or username or 'друг'}!\n\n"
         f"🏡 Нажмите на кнопку ниже, чтобы войти в приложение:\n",
         reply_markup=types.InlineKeyboardMarkup(inline_keyboard=[
-            [types.InlineKeyboardButton(text="🏡 Войти в Сказочный Терем", url=auth_url)]
+            [types.InlineKeyboardButton(text="🏡 Войти в Сказочный Терем", url=APP_URL)]
         ])
     )
     logger.info(f"Subscriber {chat_id} logged in")

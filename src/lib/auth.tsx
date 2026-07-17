@@ -7,6 +7,7 @@ declare global {
       WebApp: {
         ready: () => void;
         expand: () => void;
+        initData: string;
         initDataUnsafe: {
           user?: {
             id: number;
@@ -32,6 +33,14 @@ export interface Subscriber {
   lastName?: string;
   subscribedAt: string;
   isActive: boolean;
+}
+
+// === Telegram Mini App ===
+
+/** Подписанная строка initData — сервер проверяет её подпись при каждой мутации. */
+export function getInitData(): string | null {
+  const initData = window.Telegram?.WebApp?.initData;
+  return initData && initData.length > 0 ? initData : null;
 }
 
 // === LocalStorage helpers ===
@@ -69,78 +78,52 @@ function cacheUser(user: Subscriber | null): void {
   }
 }
 
-// === Supabase queries ===
+// === Supabase RPC ===
+
+interface SubscriberRow {
+  id: string;
+  chat_id: number;
+  username: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  subscribed_at: string;
+  is_active: boolean;
+}
+
+function mapSubscriberRow(row: SubscriberRow): Subscriber {
+  return {
+    id: row.id,
+    chatId: row.chat_id,
+    username: row.username ?? undefined,
+    firstName: row.first_name ?? undefined,
+    lastName: row.last_name ?? undefined,
+    subscribedAt: row.subscribed_at,
+    isActive: row.is_active,
+  };
+}
+
+/** Регистрация/вход по подписанной initData (подпись проверяется на сервере). */
+async function authWithTelegram(initData: string): Promise<Subscriber | null> {
+  const { data, error } = await supabase.rpc("auth_subscriber", {
+    p_init_data: initData,
+  });
+
+  if (error || !data) {
+    if (error) console.error("Telegram auth failed:", error.message);
+    return null;
+  }
+
+  return mapSubscriberRow(data as SubscriberRow);
+}
 
 async function fetchSubscriberById(id: string): Promise<Subscriber | null> {
-  const { data, error } = await supabase
-    .from("subscribers")
-    .select("*")
-    .eq("id", id)
-    .eq("is_active", true)
-    .single();
+  const { data, error } = await supabase.rpc("get_subscriber", { p_id: id });
 
   if (error || !data) {
     return null;
   }
 
-  return {
-    id: data.id,
-    chatId: data.chat_id,
-    username: data.username,
-    firstName: data.first_name,
-    lastName: data.last_name,
-    subscribedAt: data.subscribed_at,
-    isActive: data.is_active,
-  };
-}
-
-async function fetchSubscriberByChatId(chatId: number): Promise<Subscriber | null> {
-  const { data, error } = await supabase
-    .from("subscribers")
-    .select("*")
-    .eq("chat_id", chatId)
-    .eq("is_active", true)
-    .single();
-
-  if (error || !data) {
-    return null;
-  }
-
-  return {
-    id: data.id,
-    chatId: data.chat_id,
-    username: data.username,
-    firstName: data.first_name,
-    lastName: data.last_name,
-    subscribedAt: data.subscribed_at,
-    isActive: data.is_active,
-  };
-}
-
-async function registerSubscriber(
-  chatId: number,
-  firstName?: string | null,
-  lastName?: string | null,
-  username?: string | null
-): Promise<string | null> {
-  try {
-    const { data, error } = await supabase.rpc("register_subscriber", {
-      p_chat_id: chatId,
-      p_username: username ?? null,
-      p_first_name: firstName ?? null,
-      p_last_name: lastName ?? null,
-    });
-
-    if (error) {
-      console.error("Error registering subscriber:", error);
-      return null;
-    }
-
-    return data;
-  } catch (e) {
-    console.error("RPC call failed:", e);
-    return null;
-  }
+  return mapSubscriberRow(data as SubscriberRow);
 }
 
 // === React Context ===
@@ -166,54 +149,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const tryTelegramAuth = () => {
-      const tg = window.Telegram?.WebApp;
-      const tgUser = tg?.initDataUnsafe?.user;
+    const applyUser = (subscriber: Subscriber | null) => {
+      if (subscriber) {
+        setToken(subscriber.id);
+        cacheUser(subscriber);
+        setUser(subscriber);
+      }
+      setIsLoading(false);
+    };
 
-      if (tgUser?.id) {
-        registerSubscriber(tgUser.id, tgUser.first_name, tgUser.last_name, tgUser.username)
-          .then(async (authId) => {
-            if (authId) {
-              const subscriber = await fetchSubscriberById(authId);
-              if (subscriber) {
-                setToken(authId);
-                cacheUser(subscriber);
-                setUser(subscriber);
-              }
-            }
+    // Кэшированный профиль показываем сразу, пока идёт проверка
+    const cached = getToken() ? getCachedUser() : null;
+    if (cached) {
+      setUser(cached);
+      setIsLoading(false);
+    }
+
+    const initData = getInitData();
+    if (initData) {
+      // Открыто из Telegram — авторизуемся по подписанной initData
+      // (заодно обновляет имя/username и реактивирует подписчика)
+      authWithTelegram(initData)
+        .then(applyUser)
+        .catch(() => setIsLoading(false));
+    } else {
+      // Открыто в обычном браузере — пробуем сохранённый токен
+      const token = getToken();
+      if (token) {
+        fetchSubscriberById(token).then((subscriber) => {
+          if (subscriber) {
+            applyUser(subscriber);
+          } else {
+            clearToken();
+            setUser(null);
             setIsLoading(false);
-          })
-          .catch(() => {
-            setIsLoading(false);
-          });
+          }
+        });
       } else {
         setIsLoading(false);
       }
-    };
-
-    const token = getToken();
-    if (token) {
-      const cached = getCachedUser();
-      if (cached) {
-        setUser(cached);
-        setIsLoading(false);
-      }
-
-      fetchSubscriberById(token).then((subscriber) => {
-        if (subscriber) {
-          setUser(subscriber);
-          cacheUser(subscriber);
-          setIsLoading(false);
-        } else {
-          clearToken();
-          setUser(null);
-          cacheUser(null);
-          // Токен невалиден — пробуем авторизацию через Telegram
-          tryTelegramAuth();
-        }
-      });
-    } else {
-      tryTelegramAuth();
     }
   }, []);
 
@@ -254,7 +228,7 @@ export function useAuth() {
 
 // === Utility exports ===
 
-export { getToken, setToken, clearToken, cacheUser, fetchSubscriberById, fetchSubscriberByChatId, registerSubscriber };
+export { getToken, setToken, clearToken, cacheUser, fetchSubscriberById };
 
 export function getUserName(user: Subscriber | null): string {
   if (!user) return "Гость";

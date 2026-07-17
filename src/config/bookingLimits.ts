@@ -10,6 +10,8 @@
  *   VITE_BOOKING_MAX_DAYS=90           — число дней вперёд
  */
 
+import { localISODateInDays } from "@/lib/dates";
+
 export type BookingLimit =
   | { mode: "days"; days: number }
   | { mode: "fixed"; date: string };
@@ -36,9 +38,7 @@ export const BOOKING_LIMIT = resolveLimit();
 /** Крайняя доступная для бронирования дата в формате YYYY-MM-DD (включительно). */
 export function getMaxBookingDate(): string {
   if (BOOKING_LIMIT.mode === "fixed") return BOOKING_LIMIT.date;
-  const d = new Date();
-  d.setDate(d.getDate() + BOOKING_LIMIT.days);
-  return d.toISOString().split("T")[0];
+  return localISODateInDays(BOOKING_LIMIT.days);
 }
 
 /** Сообщение об ошибке при выборе даты за пределами доступного горизонта. */

@@ -1,8 +1,8 @@
-import floor1 from "@/assets/rooms/floor-1-34.jpg";
-import floor2hall from "@/assets/rooms/floor-2-hall-20.jpg";
-import floor2room from "@/assets/rooms/floor-2-room-11.jpg";
-import floor2office from "@/assets/rooms/floor-2-office-6.jpg";
-import wholeHouse from "@/assets/rooms/whole-house.jpg";
+import floor1 from "@/assets/rooms/floor-1-34.webp";
+import floor2hall from "@/assets/rooms/floor-2-hall-20.webp";
+import floor2room from "@/assets/rooms/floor-2-room-11.webp";
+import floor2office from "@/assets/rooms/floor-2-office-6.webp";
+import wholeHouse from "@/assets/rooms/whole-house.webp";
 
 export const roomImages: Record<string, string> = {
   "floor-1-34": floor1,

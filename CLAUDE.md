@@ -18,6 +18,8 @@ npm run test:watch   # Vitest in watch mode
 
 `bun` also works as a package manager alternative to `npm`.
 
+`src/test/supabase-migration.test.ts` runs `supabase-migrations-2-security.sql` against PGlite (real Postgres in WASM, node environment): initData signature verification is checked against a reference `node:crypto` implementation, plus booking conflict logic, ownership checks, and RLS state. Run it after any change to the migration file.
+
 ## Architecture
 
 This is a **room booking web app** for "Сказочный Терем" — a rental space in Russia. Users open the app as a Telegram Mini App via @SkazTerem_bot, authenticate automatically, and book one of 5 rooms.
@@ -26,13 +28,16 @@ This is a **room booking web app** for "Сказочный Терем" — a ren
 
 ### Authentication
 
-Auth is Telegram-based, not Supabase Auth. `AuthProvider` in `src/lib/auth.tsx` runs on load:
+Auth is Telegram-based, not Supabase Auth. The signed `window.Telegram.WebApp.initData` string is the credential: its HMAC signature is verified **server-side in Postgres** (`private.tg_verify_init_data`, see `supabase-migrations-2-security.sql`) on every auth and every mutation. `initDataUnsafe` is never trusted.
 
-1. If `localStorage["auth_token"]` exists → validate UUID against `subscribers` table. If invalid, clear and fall through.
-2. Try Telegram Mini App auto-auth via `window.Telegram.WebApp.initDataUnsafe.user` — calls Supabase RPC `register_subscriber` (creates or reactivates the user, returns UUID), stores UUID as `auth_token`.
-3. If neither works → unauthenticated (shows toast if user tries to book).
+`AuthProvider` in `src/lib/auth.tsx` runs on load:
 
-Protected routes (`/book`, `/bookings`) redirect unauthenticated users to `/`. There is no `/auth` page — it was removed.
+1. Cached profile from `localStorage["auth_user"]` is shown immediately while verification runs.
+2. If `initData` is present (opened inside Telegram) → RPC `auth_subscriber(initData)` verifies the signature, creates/reactivates the subscriber, updates names, returns the profile. UUID stored as `auth_token`.
+3. Otherwise, if `localStorage["auth_token"]` exists → RPC `get_subscriber(uuid)` returns own profile (knowledge of the UUID acts as a bearer token). If invalid, token is cleared.
+4. If neither works → unauthenticated (shows toast if user tries to book).
+
+Protected routes (`/book`, `/bookings`) redirect unauthenticated users to `/`. There is no `/auth` page — it was removed. Booking/cancelling requires `initData`, so it only works inside Telegram.
 
 ### Booking Flow
 
@@ -41,7 +46,7 @@ Protected routes (`/book`, `/bookings`) redirect unauthenticated users to `/`. T
 - URL param `?room=<id>` skips the room-selection step.
 - `TIME_SLOTS` = 00:00–23:00 hourly; `END_TIME_SLOTS` adds `24:00` for midnight bookings.
 - **Back navigation clears time:** `goBack()` resets `formData.startTime` and `formData.endTime` when leaving or arriving at the "time" step — ensures `TimeStep` always mounts fresh.
-- Each time slot step fetches bookings once on mount via `getActiveBookingsForRoomDate`; filtering is client-side. A server-side `isTimeSlotAvailable` guard runs before confirm as a race-condition check.
+- Each time slot step fetches bookings once on mount via `getActiveBookingsForRoomDate`; filtering is client-side. `isTimeSlotAvailable` runs before the details step as a UX pre-check; the **authoritative** conflict check happens atomically inside the `create_booking` RPC (advisory lock + check + insert in one transaction), so concurrent double-booking is impossible.
 - On confirm, title is stored as `{roomName} | {eventTitle} | {userName}`.
 - After writing to Supabase, `syncBookingToGoogleCalendar()` is called (fire-and-forget, never throws).
 - Users can enter arbitrary start/end times via `<input type="time">` in addition to hourly slot buttons.
@@ -58,13 +63,15 @@ Protected routes (`/book`, `/bookings`) redirect unauthenticated users to `/`. T
 
 ### Data Layer
 
-`src/lib/bookingStore.ts` — all Supabase queries for bookings (CRUD + conflict detection + schedule).
+`src/lib/bookingStore.ts` — all Supabase queries for bookings. **Reads** go directly to the `bookings` table (public SELECT policy). **Writes** go through RPC only: `create_booking(initData, ...)` and `cancel_booking(initData, id)` — both verify the Telegram signature and enforce ownership/conflicts server-side. RPC exceptions use short codes (`BOOKING_CONFLICT`, `AUTH_INVALID`, `AUTH_EXPIRED`, `INVALID_INPUT`, `BOOKING_NOT_FOUND`) translated to Russian in `translateRpcError`.
 
-**Whole-house conflict logic:** `"whole-house"` conflicts with every individual room and vice versa. `getConflictingRoomIds(roomId)` expands the check. All conflict/availability queries use `.in("room_id", ...)` — never `.eq()`.
+**Whole-house conflict logic:** `"whole-house"` conflicts with every individual room and vice versa. Client-side pre-checks use `getConflictingRoomIds(roomId)` with `.in("room_id", ...)` — never `.eq()`. The same rule is duplicated in the `create_booking` SQL function (and its allowed room-id list must be kept in sync with `src/data/rooms.ts`).
 
 `src/lib/googleCalendar.ts` — syncs create/cancel to Google Calendars via Apps Script webhook (`VITE_GOOGLE_APPS_SCRIPT_URL`). Uses `mode: "no-cors"`; failures are logged but never thrown.
 
 `src/data/rooms.ts` — static room definitions (5 rooms). Each has a `calendarId`. The `title` field in bookings is parsed as `{roomName} | {eventTitle} | {userName}` — use `title.split(" | ")[1]` to extract event name.
+
+`src/lib/dates.ts` — local-date helpers (`toLocalISODate`, `localISODateInDays`, `currentTimeHHMM`). **Never use `new Date().toISOString().split("T")[0]`** — it returns the UTC date, which is yesterday's date before ~03:00 in Russian timezones.
 
 ### Supabase Tables
 
@@ -72,6 +79,8 @@ Protected routes (`/book`, `/bookings`) redirect unauthenticated users to `/`. T
 - `bookings` — (`room_id`, `room_name`, `date`, `start_time`, `end_time`, `title`, `description`, `user_name`, `user_id`, `status`)
 
 The Supabase client in `src/integrations/supabase/client.ts` uses a hardcoded anon key (public, safe for client-side).
+
+**RLS (see `supabase-migrations-2-security.sql`, supersedes the policies in `supabase-migrations.sql` and all of `supabase-register-function.sql`):** `bookings` allows public SELECT only; all writes are denied for anon and go through `SECURITY DEFINER` RPCs. `subscribers` has no anon access at all — profile reads go through `get_subscriber(uuid)`. The Python bot uses the service-role key and bypasses RLS. The bot token used for initData verification lives in the `private.app_config` table (key `telegram_bot_token`) — it must be set when running the migration.
 
 ### Telegram Mini App
 
@@ -82,6 +91,10 @@ The Supabase client in `src/integrations/supabase/client.ts` uses a hardcoded an
 Custom warm-amber theme in `src/index.css`. The `warm-glow` utility class is the page background on all routes. All UI components are from shadcn/ui in `src/components/ui/`. `DialogContent` accepts a `hideCloseButton` prop (added to `src/components/ui/dialog.tsx`) to suppress the default `×` button.
 
 **iOS global CSS fixes** (in `src/index.css`): `-webkit-tap-highlight-color: transparent` on `*` removes tap flash on buttons; `overscroll-behavior-y: none` on `body` prevents elastic bounce from triggering Telegram Mini App close gesture; `padding-bottom: env(safe-area-inset-bottom)` on `body` keeps content above the iPhone home indicator. Requires `viewport-fit=cover` in `index.html` meta viewport tag for safe-area env vars to work.
+
+### Performance
+
+Pages other than `Index` are lazy-loaded via `React.lazy` in `App.tsx` (each is its own chunk). Room photos are WebP (`src/assets/rooms/*.webp`, 1200px wide, q70) — the original `.jpg` files stay in the repo as sources but are not imported, so they don't reach the bundle. Regenerate WebP from JPEG with sharp if photos change.
 
 ### Path Alias
 

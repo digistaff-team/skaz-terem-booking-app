@@ -29,7 +29,7 @@ const MyBookings = () => {
     setCancellingId(id);
     toast.info("Удаляю ваше бронирование...");
     try {
-      await cancelBooking(id, user?.id);
+      await cancelBooking(id);
       await loadBookings();
       toast.error("Бронирование отменено");
     } catch (err) {
