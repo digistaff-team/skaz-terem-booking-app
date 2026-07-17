@@ -4,7 +4,7 @@ import { rooms } from "@/data/rooms";
 import RoomCard from "@/components/RoomCard";
 import { useNavigate } from "react-router-dom";
 import { Room } from "@/types/booking";
-import { CalendarDays, BookOpen, ClipboardList, Phone, Wallet } from "lucide-react";
+import { CalendarDays, BookOpen, ClipboardList, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth";
@@ -135,7 +135,7 @@ const Index = () => {
                   "Во время пребывания держите закрытыми двери в техническое помещение, ванную комнату и комнаты на 2-м этаже.",
                   "Перед уходом проверьте, чтобы все светильники и электроприборы были выключены, окна закрыты.",
                   "Пожалуйста, бережно относитесь к пространству Терема, хрупким вещам и технике.",
-                  "В случае непредвиденных обстоятельств свяжитесь с управляющей Ольгой: +7 (989) 249-63-18 (WhatsApp, Telegram). Будьте готовы возместить ущерб, если таковой случился.",
+                  "В случае непредвиденных обстоятельств свяжитесь с куратором Терема в нашей группе в Telegram. Будьте готовы возместить ущерб, если таковой случился.",
                 ].map((rule, i) => (
                   <div key={i} className="flex gap-3">
                     <span className="text-primary shrink-0">🏡</span>
@@ -149,13 +149,6 @@ const Index = () => {
         </section>
       </main>
 
-      <footer className="border-t border-border py-6 text-center text-sm text-muted-foreground">
-        Куратор: Ольга Шанина{" "}
-        <a href="tel:+79892496318" className="inline-flex items-center gap-1 text-primary hover:underline">
-          <Phone className="h-3 w-3" />
-          +7 (989) 249-63-18
-        </a>
-      </footer>
     </div>
   );
 };

@@ -5,7 +5,7 @@ import { useAuth, getUserName } from "@/lib/auth";
 import { rooms } from "@/data/rooms";
 import { formatMinutes } from "@/lib/duration";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Phone, Wallet, CircleDollarSign } from "lucide-react";
+import { ArrowLeft, Wallet, CircleDollarSign } from "lucide-react";
 
 const REASON_LABELS: Record<TransactionReason, string> = {
   topup: "Пополнение",
@@ -94,12 +94,8 @@ const Account = () => {
             <section className="mb-6 rounded-xl border border-border bg-card p-4">
               <h3 className="mb-1 text-sm font-semibold text-foreground">Как пополнить баланс</h3>
               <p className="text-sm text-muted-foreground">
-                Купить часы можно у куратора Ольги — напишите или позвоните:{" "}
-                <a href="tel:+79892496318" className="inline-flex items-center gap-1 text-primary hover:underline">
-                  <Phone className="h-3 w-3" />
-                  +7 (989) 249-63-18
-                </a>{" "}
-                (WhatsApp, Telegram). После оплаты часы появятся здесь.
+                Купить часы можно у куратора Терема — напишите в нашу группу в Telegram.
+                После оплаты часы появятся здесь.
               </p>
             </section>
 
