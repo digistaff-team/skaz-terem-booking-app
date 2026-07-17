@@ -18,7 +18,7 @@ npm run test:watch   # Vitest in watch mode
 
 `npm` is authoritative — `package-lock.json` is the only committed lockfile, and Vercel's build command (`vercel.json`) invokes `npm run build`. `bun` can still be used ad hoc, but don't commit a `bun.lock`/`bun.lockb` alongside `package-lock.json` — having multiple lockfiles lets them drift out of sync.
 
-`src/test/supabase-migration.test.ts` runs `supabase-migrations-2-security.sql` against PGlite (real Postgres in WASM, node environment): initData signature verification is checked against a reference `node:crypto` implementation, plus booking conflict logic, ownership checks, and RLS state. Run it after any change to the migration file.
+`src/test/supabase-migration.test.ts` runs `supabase-migrations-2-security.sql` **and** `supabase-migrations-3-balance.sql` against PGlite (real Postgres in WASM, node environment): initData signature verification is checked against a reference `node:crypto` implementation, plus booking conflict logic, ownership checks, the hour-deposit accounting (charge/refund/topup), and RLS state. Run it after any change to either migration file.
 
 ## Architecture
 
@@ -65,6 +65,7 @@ Protected routes (`/book`, `/bookings`) redirect unauthenticated users to `/`. T
 - `/book` — `src/pages/booking/BookingFlow.tsx`: booking wizard (protected).
 - `/bookings` — `MyBookings.tsx`: user's active bookings with cancel (protected). Uses `useQuery(["myBookings", userId])` + `useMutation` for cancel; `cancellingId` (for the per-row blur/disable animation) is derived from `cancelMutation.isPending ? cancelMutation.variables : null` rather than separate state.
 - `/schedule` — `Schedule.tsx`: read-only view of all bookings for a selected date, sorted by time.
+- `/account` — `Account.tsx`: personal cabinet (protected). Per-room hour balances (negative = долг, shown in red), top-up instructions (contact the curator), and the last 30 balance transactions. Data via `useQuery(["account"])` → `getAccount()` in `src/lib/accountStore.ts` → RPC `get_account(initData)`.
 
 ### Data Layer
 
@@ -79,6 +80,17 @@ Protected routes (`/book`, `/bookings`) redirect unauthenticated users to `/`. T
 `title` in the `bookings` table holds the clean event name (set via `create_booking`'s `p_title`). Older rows created before this change still hold the legacy `{roomName} | {eventTitle} | {userName}` format — `parseEventTitle()` in `src/lib/booking.ts` handles both: returns the middle `" | "`-separated segment if present, else the raw title. Used by `MyBookings.tsx` and `Schedule.tsx` wherever an event name is displayed.
 
 `src/lib/dates.ts` — local-date helpers: `toLocalISODate`, `localISODateInDays`, `currentTimeHHMM`, `parseLocalDate` (parses `YYYY-MM-DD` at local noon to dodge timezone day-shift), `formatDateLong`/`formatDateShort` (Russian date formatting, used by `BookingFlow`/`MyBookings` respectively — different layouts, not interchangeable). **Never use `new Date().toISOString().split("T")[0]`** — it returns the UTC date, which is yesterday's date before ~03:00 in Russian timezones.
+
+### Hour Deposit (личный кабинет)
+
+Users pre-pay for hours per room; bookings deduct from that deposit (see `supabase-migrations-3-balance.sql`). Accounting is **per-minute** (`minutes INTEGER` in `room_balances`), **per-room** (separate balance for each of the 5 rooms, including `whole-house`), and **negative balances are allowed** — going into долг does not block booking.
+
+- `create_booking` deducts the exact duration inside the same transaction as the insert, and returns `charged_minutes`/`balance_after` alongside the booking row.
+- `cancel_booking` refunds the net sum of that booking's transactions (`refund_minutes` in the response). Legacy bookings created before the deposit system have no transactions → refund 0; double-refund is impossible (net becomes 0 after the first refund).
+- Top-up: the Telegram bot's `/hours` command (admins listed in `ADMIN_CHAT_IDS` env only) → RPC `admin_add_hours(chat_id, room_id, minutes, comment)`, which is granted **only to `service_role`** — the anon key cannot call it. Positive delta = `topup`, negative = `adjust`. The bot notifies the user about topups.
+- All balance changes go through `private.apply_balance_change` (atomic upsert-increment + a `balance_transactions` history row). Payment itself happens offline (via the curator); there is no payment integration.
+- `src/lib/duration.ts` — `timeToMinutes`/`durationMinutes`/`formatMinutes` («−1 ч 45 мин» formatting; the bot has a Python copy of `format_minutes`).
+- Room-id lists are duplicated in `admin_add_hours` (SQL), `create_booking` (SQL), and the bot's `ROOMS` dict — keep all in sync with `src/data/rooms.ts`.
 
 ### Supabase Tables
 

@@ -11,6 +11,7 @@ import Index from "./pages/Index.tsx";
 const BookingFlow = lazy(() => import("./pages/booking/BookingFlow.tsx"));
 const MyBookings = lazy(() => import("./pages/MyBookings.tsx"));
 const Schedule = lazy(() => import("./pages/Schedule.tsx"));
+const Account = lazy(() => import("./pages/Account.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 const queryClient = new QueryClient();
@@ -61,6 +62,14 @@ const AppRoutes = () => {
         }
       />
       <Route path="/schedule" element={<Schedule />} />
+      <Route
+        path="/account"
+        element={
+          <ProtectedRoute>
+            <Account />
+          </ProtectedRoute>
+        }
+      />
       <Route path="*" element={<NotFound />} />
     </Routes>
     </Suspense>

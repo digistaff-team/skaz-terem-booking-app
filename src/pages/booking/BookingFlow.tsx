@@ -19,6 +19,7 @@ import { useAuth, getUserName } from "@/lib/auth";
 import { getMaxBookingDate, getMaxDateErrorMessage } from "@/config/bookingLimits";
 import { getErrorMessage } from "@/lib/utils";
 import { toLocalISODate, localISODateInDays, currentTimeHHMM, formatDateLong } from "@/lib/dates";
+import { durationMinutes, formatMinutes } from "@/lib/duration";
 import { STEP_ORDER, isIOS, type Step } from "./constants";
 import { TimeStep } from "./TimeStep";
 import { DetailsStep } from "./DetailsStep";
@@ -41,6 +42,7 @@ const BookingFlow = () => {
     mutationFn: (payload: Omit<Booking, "id" | "createdAt" | "status">) => addBooking(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myBookings"] });
+      queryClient.invalidateQueries({ queryKey: ["account"] });
     },
   });
 
@@ -137,7 +139,7 @@ const BookingFlow = () => {
     if (bookMutation.isPending) return;
 
     try {
-      await bookMutation.mutateAsync({
+      const result = await bookMutation.mutateAsync({
         roomId: selectedRoom.id,
         roomName: selectedRoom.name,
         date: formData.date,
@@ -149,10 +151,11 @@ const BookingFlow = () => {
       });
 
       const isSecondFloor = selectedRoom.floor === "2 этаж" || selectedRoom.floor === "Оба этажа";
+      const balanceLine = `\nОстаток часов: ${formatMinutes(result.balanceAfter)}`;
       toast.success(
-        isSecondFloor
+        (isSecondFloor
           ? "Помещение успешно забронировано!\nКод от ключницы - 2481"
-          : "Помещение успешно забронировано!"
+          : "Помещение успешно забронировано!") + balanceLine
       );
       navigate("/bookings");
     } catch (err) {
@@ -312,7 +315,12 @@ const BookingFlow = () => {
                 <Clock className="h-5 w-5 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Время</p>
-                  <p className="font-semibold text-foreground">{formData.startTime} — {formData.endTime}</p>
+                  <p className="font-semibold text-foreground">
+                    {formData.startTime} — {formData.endTime}
+                    <span className="ml-2 text-sm font-normal text-muted-foreground">
+                      (спишется {formatMinutes(durationMinutes(formData.startTime!, formData.endTime!))})
+                    </span>
+                  </p>
                 </div>
               </div>
               <div className="border-t border-border pt-4">

@@ -85,14 +85,22 @@ export async function getActiveBookings(userId?: string): Promise<Booking[]> {
     .filter((b) => b.date > today || b.endTime > currentTime);
 }
 
+export interface AddBookingResult {
+  booking: Booking;
+  /** Сколько минут списано с депозита за эту бронь. */
+  chargedMinutes: number;
+  /** Баланс помещения после списания (может быть отрицательным — долг). */
+  balanceAfter: number;
+}
+
 export async function addBooking(
   booking: Omit<Booking, "id" | "createdAt" | "status">
-): Promise<Booking> {
+): Promise<AddBookingResult> {
   const initData = getInitData();
   if (!initData) throw new Error(NO_TELEGRAM_ERROR);
 
-  // Атомарная вставка: проверка конфликтов и запись происходят на сервере
-  // в одной транзакции — двойное бронирование невозможно.
+  // Атомарная вставка: проверка конфликтов, запись и списание минут с депозита
+  // происходят на сервере в одной транзакции — двойное бронирование невозможно.
   const { data, error } = await supabase.rpc("create_booking", {
     p_init_data: initData,
     p_room_id: booking.roomId,
@@ -107,19 +115,30 @@ export async function addBooking(
 
   if (error) throw new Error(translateRpcError(error.message));
 
-  const newBooking = mapRow(data as BookingRow);
+  const row = data as BookingRow & { charged_minutes: number; balance_after: number };
+  const newBooking = mapRow(row);
 
   // Sync to Google Calendar
   await syncBookingToGoogleCalendar(newBooking);
 
-  return newBooking;
+  return {
+    booking: newBooking,
+    chargedMinutes: row.charged_minutes ?? 0,
+    balanceAfter: row.balance_after ?? 0,
+  };
 }
 
-export async function cancelBooking(id: string): Promise<void> {
+export interface CancelBookingResult {
+  /** Сколько минут вернулось на депозит (0 для legacy-броней без списания). */
+  refundMinutes: number;
+}
+
+export async function cancelBooking(id: string): Promise<CancelBookingResult> {
   const initData = getInitData();
   if (!initData) throw new Error(NO_TELEGRAM_ERROR);
 
-  // Сервер сам проверяет, что бронь принадлежит этому пользователю
+  // Сервер сам проверяет, что бронь принадлежит этому пользователю,
+  // и возвращает списанные минуты на баланс
   const { data, error } = await supabase.rpc("cancel_booking", {
     p_init_data: initData,
     p_booking_id: id,
@@ -127,11 +146,14 @@ export async function cancelBooking(id: string): Promise<void> {
 
   if (error) throw new Error(translateRpcError(error.message));
 
+  const cancelled = data as (BookingRow & { refund_minutes: number }) | null;
+
   // Remove from Google Calendar
-  const cancelled = data as BookingRow | null;
   if (cancelled) {
     await cancelBookingInGoogleCalendar(id, cancelled.room_id);
   }
+
+  return { refundMinutes: cancelled?.refund_minutes ?? 0 };
 }
 
 export async function getCurrentBooking(

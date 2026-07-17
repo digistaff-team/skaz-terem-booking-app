@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/utils";
 import { formatDateShort } from "@/lib/dates";
+import { formatMinutes } from "@/lib/duration";
 import { parseEventTitle } from "@/lib/booking";
 import { ArrowLeft, CalendarDays, Home, Trash2 } from "lucide-react";
 
@@ -20,9 +21,14 @@ const MyBookings = () => {
 
   const cancelMutation = useMutation({
     mutationFn: (id: string) => cancelBooking(id),
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["myBookings"] });
-      toast.success("Бронирование отменено");
+      queryClient.invalidateQueries({ queryKey: ["account"] });
+      toast.success(
+        result.refundMinutes > 0
+          ? `Бронирование отменено, возвращено ${formatMinutes(result.refundMinutes)}`
+          : "Бронирование отменено"
+      );
     },
     onError: (err) => {
       toast.error("Ошибка при отмене: " + getErrorMessage(err));
