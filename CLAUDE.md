@@ -16,7 +16,7 @@ npm run test         # Run tests once (Vitest)
 npm run test:watch   # Vitest in watch mode
 ```
 
-`bun` also works as a package manager alternative to `npm`.
+`npm` is authoritative — `package-lock.json` is the only committed lockfile, and Vercel's build command (`vercel.json`) invokes `npm run build`. `bun` can still be used ad hoc, but don't commit a `bun.lock`/`bun.lockb` alongside `package-lock.json` — having multiple lockfiles lets them drift out of sync.
 
 `src/test/supabase-migration.test.ts` runs `supabase-migrations-2-security.sql` against PGlite (real Postgres in WASM, node environment): initData signature verification is checked against a reference `node:crypto` implementation, plus booking conflict logic, ownership checks, and RLS state. Run it after any change to the migration file.
 
