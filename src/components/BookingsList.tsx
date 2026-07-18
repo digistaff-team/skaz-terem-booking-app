@@ -23,6 +23,7 @@ const BookingsList = () => {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["myBookings"] });
       queryClient.invalidateQueries({ queryKey: ["account"] });
+      queryClient.invalidateQueries({ queryKey: ["monthBookings"] });
       toast.success(
         result.refundMinutes > 0
           ? `Бронирование отменено, возвращено ${formatMinutes(result.refundMinutes)}`

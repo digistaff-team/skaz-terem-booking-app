@@ -82,6 +82,10 @@ Protected routes (`/book`, `/bookings`) redirect unauthenticated users to `/`. T
 
 `src/lib/dates.ts` — local-date helpers: `toLocalISODate`, `localISODateInDays`, `currentTimeHHMM`, `parseLocalDate` (parses `YYYY-MM-DD` at local noon to dodge timezone day-shift), `formatDateLong`/`formatDateShort` (Russian date formatting, used by `BookingFlow`/`MyBookings` respectively — different layouts, not interchangeable). **Never use `new Date().toISOString().split("T")[0]`** — it returns the UTC date, which is yesterday's date before ~03:00 in Russian timezones.
 
+### Monthly Room Limits (общий пул)
+
+Alongside personal deposits there is a **shared monthly hour limit per room** — one pool for all residents (`src/config/monthlyLimits.ts`: floor-1-34 and floor-2-hall-20 — 60 h/mo; floor-2-office-6 and floor-2-room-11 — 120 h/mo). It is **informational only** — booking is never blocked; overspend shows in red. The remainder is *computed*, not stored: `limit − Σ active bookings of that calendar month` (`computeMonthUsage` in `src/lib/monthlyUsage.ts`, fed by `getActiveBookingsForMonth`), so the «reset on the 1st» happens by construction and cancellations refund the pool automatically — no cron, no migration, no server changes. A booking's month is its **date's** month (an August booking spends the August pool). `whole-house` bookings consume the limit of **every** room and have no limit of their own. Displayed in `/account` via `src/components/MonthlyLimits.tsx`; the `["monthBookings"]` query is invalidated after create/cancel.
+
 ### Hour Deposit (личный кабинет)
 
 Users pre-pay for hours per room; bookings deduct from that deposit (see `supabase-migrations-3-balance.sql`). Accounting is **per-minute** (`minutes INTEGER` in `room_balances`), **per-room** (separate balance for each of the 5 rooms, including `whole-house`), and **negative balances are allowed** — going into долг does not block booking.

@@ -177,6 +177,24 @@ export async function getActiveBookingsForRoomDate(
   return (data ?? []).map(mapRow);
 }
 
+/** Активные брони календарного месяца (month = 'YYYY-MM') — для расчёта
+ * общего месячного лимита помещений. */
+export async function getActiveBookingsForMonth(month: string): Promise<Booking[]> {
+  const [y, m] = month.split("-").map(Number);
+  const from = `${month}-01`;
+  const to = toLocalISODate(new Date(y, m, 0)); // последний день месяца
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("id, room_id, room_name, date, start_time, end_time, title, description, user_name, status")
+    .gte("date", from)
+    .lte("date", to)
+    .eq("status", "active");
+
+  if (error) return [];
+  return (data ?? []).map(mapRow);
+}
+
 export async function getBookingsForDate(date: string): Promise<Booking[]> {
   const { data, error } = await supabase
     .from("bookings")

@@ -6,6 +6,7 @@ import { rooms } from "@/data/rooms";
 import { formatMinutes } from "@/lib/duration";
 import { Button } from "@/components/ui/button";
 import BookingsList from "@/components/BookingsList";
+import MonthlyLimits from "@/components/MonthlyLimits";
 import { ArrowLeft, Wallet, CircleDollarSign, BarChart3, ClipboardList } from "lucide-react";
 
 const REASON_LABELS: Record<TransactionReason, string> = {
@@ -57,6 +58,9 @@ const Account = () => {
           </h2>
           <BookingsList />
         </section>
+
+        {/* Общий месячный лимит помещений */}
+        <MonthlyLimits />
 
         {isLoading ? (
           <div className="rounded-xl border border-border bg-card p-8 text-center">

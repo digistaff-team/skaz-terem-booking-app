@@ -43,6 +43,7 @@ const BookingFlow = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myBookings"] });
       queryClient.invalidateQueries({ queryKey: ["account"] });
+      queryClient.invalidateQueries({ queryKey: ["monthBookings"] });
     },
   });
 
