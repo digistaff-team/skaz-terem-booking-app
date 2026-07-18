@@ -67,6 +67,7 @@ Protected routes (`/book`, `/bookings`) redirect unauthenticated users to `/`. T
 - `/schedule` — `Schedule.tsx`: read-only view of all bookings for a selected date, sorted by time.
 - `/account` — `Account.tsx`: personal cabinet (protected). Per-room hour balances (negative = долг, shown in red), top-up instructions (contact the curator), and the last 30 balance transactions. Data via `useQuery(["account"])` → `getAccount()` in `src/lib/accountStore.ts` → RPC `get_account(initData)`.
 - `/admin` — `Admin.tsx`: hour top-up form for admins only (`is_admin` flag; non-admins are redirected to `/account`, and the server enforces `ADMIN_ONLY` anyway). Native `<select>` elements styled like Input — the shadcn Select component was removed in the dependency cleanup.
+- `/admin/stats` — `AdminStats.tsx`: booking statistics for admins (client-side guard only — bookings are publicly readable anyway). Fetches all bookings, filters by period presets, and renders KPI tiles + pure-CSS bar charts (months/rooms/weekdays/start hours) + top-users list. Aggregation lives in `src/lib/stats.ts` (`computeStats`, unit-tested). All charts are single-measure → one fill color: the `accent` token (~4:1 contrast vs card; `primary` fails 3:1) with direct value labels — no hover dependency on mobile.
 
 ### Data Layer
 
