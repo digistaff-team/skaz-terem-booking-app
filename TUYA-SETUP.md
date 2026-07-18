@@ -1,5 +1,24 @@
 # Настройка персональных кодов ключницы Tuya
 
+> **Статус на 2026-07-18.** Облачный проект Tuya УЖЕ СУЩЕСТВУЕТ — ключи
+> (Access ID/Secret) и device_id ключницы лежат в
+> `C:\Projects\SkazTerem_Bot\tuya_keybox_api_delivery\.env.txt` (вне git).
+> Проверка показала: ключи валидны (токен выдаётся), но
+> **подписка IoT Core проекта истекла** (`28841002: IoT Core service
+> subscription has expired`) — её нужно продлить (бесплатно):
+> iot.tuya.com → Cloud → ваш проект → **Service API → IoT Core → Extend/Renew**
+> (или Cloud → Cloud Services → IoT Core → Free Trial → Extend).
+> После продления шаг 4 ниже пропускается — сразу к шагу 5 с ключами из файла.
+>
+> **Важно из прошлых попыток** (README предыдущего разработчика в
+> `tuya_keybox_api_delivery`): стандартный флоу `password-ticket →
+> temp-password` на этой модели ключницы возвращал ошибку **1109** — модели,
+> вероятно, нужны Raw-команды (`temporary_password_creat`). После продления
+> подписки нужно снять формат команды из Online Debug (Smart Life → создать
+> временный код вручную → Tuya Cloud → Devices → Device Debugging → лог
+> функции `temporary_password_creat`, поле value в base64) — и Edge Function
+> будет доработана под этот формат.
+
 Каждая бронь получает уникальный код доступа, действующий в окне брони ±30 минут.
 Коды создаёт Supabase Edge Function `tuya-lock-code` через Tuya Cloud API и
 показывает пользователю в карточке брони в кабинете.
