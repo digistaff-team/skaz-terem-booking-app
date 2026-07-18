@@ -4,7 +4,7 @@ import { rooms } from "@/data/rooms";
 import RoomCard from "@/components/RoomCard";
 import { useNavigate } from "react-router-dom";
 import { Room } from "@/types/booking";
-import { CalendarDays, BookOpen, ClipboardList, Wallet } from "lucide-react";
+import { CalendarDays, BookOpen, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth";
@@ -42,21 +42,14 @@ const Index = () => {
           </div>
           <div className="flex gap-1">
             {isAuthenticated ? (
-              <>
-                <Link to="/account">
-                  <Button variant="ghost" size="sm" className="gap-1.5">
-                    <Wallet className="h-4 w-4" /> Кабинет
-                  </Button>
-                </Link>
-                <Link to="/bookings">
-                  <Button variant="ghost" size="sm" className="gap-1.5">
-                    <ClipboardList className="h-4 w-4" /> Мои брони
-                  </Button>
-                </Link>
-              </>
+              <Link to="/account">
+                <Button variant="ghost" size="sm" className="gap-1.5">
+                  <Wallet className="h-4 w-4" /> Кабинет
+                </Button>
+              </Link>
             ) : (
               <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => toast.info("Для бронирования откройте приложение через бота @SkazTerem_bot")}>
-                <ClipboardList className="h-4 w-4" /> Мои брони
+                <Wallet className="h-4 w-4" /> Кабинет
               </Button>
             )}
           </div>

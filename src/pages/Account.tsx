@@ -5,7 +5,8 @@ import { useAuth, getUserName } from "@/lib/auth";
 import { rooms } from "@/data/rooms";
 import { formatMinutes } from "@/lib/duration";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Wallet, CircleDollarSign, BarChart3 } from "lucide-react";
+import BookingsList from "@/components/BookingsList";
+import { ArrowLeft, Wallet, CircleDollarSign, BarChart3, ClipboardList } from "lucide-react";
 
 const REASON_LABELS: Record<TransactionReason, string> = {
   topup: "Пополнение",
@@ -48,6 +49,14 @@ const Account = () => {
 
         <h1 className="mb-1 text-2xl font-bold text-foreground">Личный кабинет</h1>
         <p className="mb-6 text-muted-foreground">{getUserName(user)}{user?.username ? ` · @${user.username}` : ""}</p>
+
+        {/* Мои бронирования */}
+        <section className="mb-6">
+          <h2 className="mb-3 text-lg font-semibold text-foreground flex items-center gap-2">
+            <ClipboardList className="h-5 w-5 text-primary" /> Мои бронирования
+          </h2>
+          <BookingsList />
+        </section>
 
         {isLoading ? (
           <div className="rounded-xl border border-border bg-card p-8 text-center">
@@ -127,27 +136,28 @@ const Account = () => {
               )}
             </section>
 
-            <div className="mt-8 space-y-3">
-              <Link to="/book" className="block">
-                <Button className="w-full" size="lg">Забронировать помещение</Button>
-              </Link>
-              {user?.isAdmin && (
-                <>
-                  <Link to="/admin" className="block">
-                    <Button variant="outline" className="w-full gap-2" size="lg">
-                      <CircleDollarSign className="h-5 w-5" /> Начисление часов (админ)
-                    </Button>
-                  </Link>
-                  <Link to="/admin/stats" className="block">
-                    <Button variant="outline" className="w-full gap-2" size="lg">
-                      <BarChart3 className="h-5 w-5" /> Статистика (админ)
-                    </Button>
-                  </Link>
-                </>
-              )}
-            </div>
           </>
         )}
+
+        <div className="mt-8 space-y-3">
+          <Link to="/book" className="block">
+            <Button className="w-full" size="lg">Забронировать помещение</Button>
+          </Link>
+          {user?.isAdmin && (
+            <>
+              <Link to="/admin" className="block">
+                <Button variant="outline" className="w-full gap-2" size="lg">
+                  <CircleDollarSign className="h-5 w-5" /> Начисление часов (админ)
+                </Button>
+              </Link>
+              <Link to="/admin/stats" className="block">
+                <Button variant="outline" className="w-full gap-2" size="lg">
+                  <BarChart3 className="h-5 w-5" /> Статистика (админ)
+                </Button>
+              </Link>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

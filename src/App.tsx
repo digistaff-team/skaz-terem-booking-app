@@ -9,7 +9,6 @@ import Index from "./pages/Index.tsx";
 
 // Главная грузится сразу, остальные страницы — отдельными чанками по требованию
 const BookingFlow = lazy(() => import("./pages/booking/BookingFlow.tsx"));
-const MyBookings = lazy(() => import("./pages/MyBookings.tsx"));
 const Schedule = lazy(() => import("./pages/Schedule.tsx"));
 const Account = lazy(() => import("./pages/Account.tsx"));
 const Admin = lazy(() => import("./pages/Admin.tsx"));
@@ -55,14 +54,8 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/bookings"
-        element={
-          <ProtectedRoute>
-            <MyBookings />
-          </ProtectedRoute>
-        }
-      />
+      {/* Раздел «Мои брони» объединён с кабинетом; старый адрес ведёт туда же */}
+      <Route path="/bookings" element={<Navigate to="/account" replace />} />
       <Route path="/schedule" element={<Schedule />} />
       <Route
         path="/account"

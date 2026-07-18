@@ -157,7 +157,7 @@ const BookingFlow = () => {
           ? "Помещение успешно забронировано!\nКод от ключницы - 2481"
           : "Помещение успешно забронировано!") + balanceLine
       );
-      navigate("/bookings");
+      navigate("/account");
     } catch (err) {
       toast.error("Ошибка при бронировании: " + getErrorMessage(err));
     }
