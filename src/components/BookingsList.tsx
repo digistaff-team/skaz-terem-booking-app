@@ -6,7 +6,46 @@ import { getErrorMessage } from "@/lib/utils";
 import { formatDateShort } from "@/lib/dates";
 import { formatMinutes } from "@/lib/duration";
 import { parseEventTitle } from "@/lib/booking";
-import { CalendarDays, Home, Trash2 } from "lucide-react";
+import { getLockCode } from "@/lib/lockCodes";
+import { CalendarDays, Home, Trash2, KeyRound } from "lucide-react";
+
+/** Код ключницы в карточке брони: подгружается сам, при ошибке скрывается. */
+const LockCodeRow = ({ bookingId }: { bookingId: string }) => {
+  const { data: lockCode, isLoading, isError } = useQuery({
+    queryKey: ["lockCode", bookingId],
+    queryFn: () => getLockCode(bookingId),
+    staleTime: Infinity,
+    retry: 1,
+  });
+
+  if (isError) return null;
+  if (isLoading) {
+    return (
+      <p className="mt-3 text-sm text-muted-foreground animate-pulse flex items-center gap-2">
+        <KeyRound className="h-4 w-4 shrink-0" /> Получаю код доступа...
+      </p>
+    );
+  }
+  if (!lockCode) return null;
+
+  const time = (iso: string) =>
+    new Date(iso).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+
+  return (
+    <div className="mt-3 rounded-lg bg-secondary/60 px-3 py-2 flex items-center gap-2">
+      <KeyRound className="h-4 w-4 shrink-0 text-primary" />
+      <div className="min-w-0 text-sm">
+        <span className="text-muted-foreground">Код от ключницы: </span>
+        <span className="font-bold text-foreground tracking-wider">{lockCode.code}</span>
+        {lockCode.effectiveFrom && !lockCode.isStatic && (
+          <span className="block text-xs text-muted-foreground">
+            действует с {time(lockCode.effectiveFrom)} до {time(lockCode.effectiveTo)}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
 
 /** Активные брони пользователя с возможностью отмены (секция кабинета). */
 const BookingsList = () => {
@@ -97,6 +136,7 @@ const BookingsList = () => {
               <CalendarDays className="h-4 w-4 shrink-0" /> {parseEventTitle(b.title)}
             </div>
           </div>
+          <LockCodeRow bookingId={b.id} />
           <p className="mt-3 text-xs text-muted-foreground">Ответственный: {b.userName}</p>
           {cancellingId === b.id && (
             <p className="mt-3 text-sm text-muted-foreground animate-pulse">

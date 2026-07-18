@@ -151,12 +151,9 @@ const BookingFlow = () => {
         userName: formData.userName || getUserName(user),
       });
 
-      const isSecondFloor = selectedRoom.floor === "2 этаж" || selectedRoom.floor === "Оба этажа";
-      const balanceLine = `\nОстаток часов: ${formatMinutes(result.balanceAfter)}`;
       toast.success(
-        (isSecondFloor
-          ? "Помещение успешно забронировано!\nКод от ключницы - 2481"
-          : "Помещение успешно забронировано!") + balanceLine
+        "Помещение успешно забронировано!\n" +
+        `Код от ключницы — в карточке брони.\nОстаток часов: ${formatMinutes(result.balanceAfter)}`
       );
       navigate("/account");
     } catch (err) {
