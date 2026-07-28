@@ -12,7 +12,6 @@ interface DetailsStepProps {
 export function DetailsStep({ onSubmit, userName }: DetailsStepProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [name, setName] = useState(userName);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
 
   useEffect(() => {
@@ -36,7 +35,7 @@ export function DetailsStep({ onSubmit, userName }: DetailsStepProps) {
       toast.error("Введите название мероприятия");
       return;
     }
-    onSubmit(title.trim(), description.trim(), name.trim());
+    onSubmit(title.trim(), description.trim(), userName.trim());
   };
 
   return (
@@ -52,8 +51,8 @@ export function DetailsStep({ onSubmit, userName }: DetailsStepProps) {
           <Input id="desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Краткое описание (необязательно)" className="mt-1.5" />
         </div>
         <div>
-          <Label htmlFor="name">Ваше имя (ответственный)</Label>
-          <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="mt-1.5" />
+          <Label htmlFor="name">Ответственный</Label>
+          <Input id="name" value={userName} readOnly disabled className="mt-1.5" />
         </div>
         <Button type="submit" className="w-full" size="lg">Далее</Button>
       </div>
