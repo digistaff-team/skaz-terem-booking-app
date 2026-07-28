@@ -1,0 +1,22 @@
+name: Keep Supabase project alive
+
+# Free-tier Supabase проекты автоматически ставятся на паузу после ~7 дней
+# без активности (см. память "supabase-free-tier-pause"). Пингуем REST API
+# каждые 3 дня, чтобы проект считался активным и не засыпал.
+
+on:
+  schedule:
+    - cron: "0 6 */3 * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST endpoint
+        run: |
+          curl -sf -o /dev/null \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            "https://aveitrccxqbjfxysogiv.supabase.co/rest/v1/bookings?select=id&limit=1"
+        env:
+          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2ZWl0cmNjeHFiamZ4eXNvZ2l2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MTE1NzAsImV4cCI6MjA5MTQ4NzU3MH0.mIoMMte12VPxAxC8_UHmiYe2hX3UygSCxdhAd0LSHJw
