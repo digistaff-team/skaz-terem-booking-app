@@ -4,7 +4,6 @@ import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/utils";
 import { formatDateShort } from "@/lib/dates";
-import { formatMinutes } from "@/lib/duration";
 import { parseEventTitle } from "@/lib/booking";
 import { getLockCode } from "@/lib/lockCodes";
 import { CalendarDays, Home, Trash2, KeyRound } from "lucide-react";
@@ -59,15 +58,11 @@ const BookingsList = () => {
 
   const cancelMutation = useMutation({
     mutationFn: (id: string) => cancelBooking(id),
-    onSuccess: (result) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myBookings"] });
       queryClient.invalidateQueries({ queryKey: ["account"] });
       queryClient.invalidateQueries({ queryKey: ["monthBookings"] });
-      toast.success(
-        result.refundMinutes > 0
-          ? `Бронирование отменено, возвращено ${formatMinutes(result.refundMinutes)}`
-          : "Бронирование отменено"
-      );
+      toast.success("Бронирование отменено");
     },
     onError: (err) => {
       toast.error("Ошибка при отмене: " + getErrorMessage(err));
