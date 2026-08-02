@@ -62,6 +62,7 @@ const BookingsList = () => {
       queryClient.invalidateQueries({ queryKey: ["myBookings"] });
       queryClient.invalidateQueries({ queryKey: ["account"] });
       queryClient.invalidateQueries({ queryKey: ["monthBookings"] });
+      queryClient.invalidateQueries({ queryKey: ["personalMonthBookings"] });
       toast.success("Бронирование отменено");
     },
     onError: (err) => {
