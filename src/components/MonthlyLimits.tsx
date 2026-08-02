@@ -26,7 +26,7 @@ const MonthlyLimits = () => {
   return (
     <section className="mb-6">
       <h2 className="mb-3 text-lg font-semibold text-foreground flex items-center gap-2">
-        <CalendarClock className="h-5 w-5 text-primary" /> Лимит Терема на {monthName}
+        <CalendarClock className="h-5 w-5 text-primary" /> Общий лимит на {monthName}
       </h2>
       {isLoading ? (
         <div className="rounded-xl border border-border bg-card p-6 text-center">
