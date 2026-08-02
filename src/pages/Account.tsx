@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { useAuth, getUserName } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import BookingsList from "@/components/BookingsList";
+import PersonalLimit from "@/components/PersonalLimit";
+import MonthlyLimits from "@/components/MonthlyLimits";
 import { ArrowLeft, CircleDollarSign, BarChart3, ClipboardList } from "lucide-react";
 
 const Account = () => {
@@ -24,6 +26,9 @@ const Account = () => {
           </h2>
           <BookingsList />
         </section>
+
+        <PersonalLimit />
+        <MonthlyLimits />
 
         <div className="mt-8 space-y-3">
           <Link to="/book" className="block">
