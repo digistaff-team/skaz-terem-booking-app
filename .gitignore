@@ -27,3 +27,4 @@ bot/.env
 bot/__pycache__/
 docs/
 QWEN.md
+.worktrees/
