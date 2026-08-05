@@ -29,6 +29,10 @@ export interface BookingStats {
   totalMinutes: number;
   /** Средняя длительность активной брони в минутах. */
   avgMinutes: number;
+  /** Кол-во активных броней, оформленных постфактум (пост-учёт посещаемости). */
+  backdatedCount: number;
+  /** Суммарные минуты активных броней, оформленных постфактум. Часть totalMinutes, не дополнение к нему. */
+  backdatedMinutes: number;
   uniqueUsers: number;
   byMonth: MonthStat[]; // отсортировано по месяцу
   byRoom: RoomStat[]; // отсортировано по минутам, убыв.
@@ -52,9 +56,16 @@ export function computeStats(bookings: Booking[], topUsersLimit = 10): BookingSt
   const byUser = new Map<string, UserStat>();
   const byWeekday = new Array(7).fill(0);
   const byStartHour = new Array(24).fill(0);
+  let backdatedCount = 0;
+  let backdatedMinutes = 0;
 
   for (const b of active) {
     const minutes = durationMinutes(b.startTime, b.endTime);
+
+    if (b.isBackdated) {
+      backdatedCount++;
+      backdatedMinutes += minutes;
+    }
 
     const month = b.date.slice(0, 7);
     const m = byMonth.get(month) ?? { month, count: 0, minutes: 0 };
@@ -83,6 +94,8 @@ export function computeStats(bookings: Booking[], topUsersLimit = 10): BookingSt
     cancelled,
     totalMinutes,
     avgMinutes: active.length ? Math.round(totalMinutes / active.length) : 0,
+    backdatedCount,
+    backdatedMinutes,
     uniqueUsers: new Set(bookings.map((b) => b.userName)).size,
     byMonth: [...byMonth.values()].sort((a, b) => a.month.localeCompare(b.month)),
     byRoom: [...byRoom.values()].sort((a, b) => b.minutes - a.minutes),

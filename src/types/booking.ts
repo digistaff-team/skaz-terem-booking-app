@@ -34,6 +34,8 @@ export interface Booking {
   userId?: string; // subscriber.id
   status: 'active' | 'cancelled';
   createdAt: string;
+  /** Бронь создана постфактум на уже прошедшую дату (пост-учёт посещаемости). */
+  isBackdated: boolean;
 }
 
 export interface BookingFormData {

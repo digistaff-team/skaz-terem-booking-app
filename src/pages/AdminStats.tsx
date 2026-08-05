@@ -46,6 +46,16 @@ function hoursLabel(minutes: number): string {
   return `${String(rounded).replace(".", ",")} ч`;
 }
 
+/** 1 → «бронь», 2-4 → «брони», 5+/11-14 → «броней». */
+function bookingWord(n: number): string {
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 14) return "броней";
+  const mod10 = n % 10;
+  if (mod10 === 1) return "бронь";
+  if (mod10 >= 2 && mod10 <= 4) return "брони";
+  return "броней";
+}
+
 function StatTile({ value, label, sub }: { value: string; label: string; sub?: string }) {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
@@ -137,6 +147,15 @@ const AdminStats = () => {
               <StatTile value={hoursLabel(stats.totalMinutes)} label="часов брони" />
               <StatTile value={formatMinutes(stats.avgMinutes)} label="средняя длительность" />
               <StatTile value={String(stats.uniqueUsers)} label="пользователей" />
+              <StatTile
+                value={hoursLabel(stats.backdatedMinutes)}
+                label="внесено задним числом"
+                sub={
+                  stats.backdatedCount > 0
+                    ? `${stats.backdatedCount} ${bookingWord(stats.backdatedCount)} из ${stats.active} (${Math.round(stats.backdatedMinutes / (stats.totalMinutes || 1) * 100)}%)`
+                    : undefined
+                }
+              />
             </div>
 
             {/* По месяцам */}

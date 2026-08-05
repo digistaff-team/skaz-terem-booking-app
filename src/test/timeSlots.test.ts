@@ -15,6 +15,7 @@ function makeBooking(startTime: string, endTime: string): Booking {
     userName: "Иван",
     status: "active",
     createdAt: "",
+    isBackdated: false,
   };
 }
 

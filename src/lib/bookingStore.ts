@@ -276,6 +276,7 @@ interface BookingRow {
   user_id?: string | null;
   status: Booking["status"];
   created_at?: string | null;
+  is_backdated?: boolean | null;
 }
 
 function mapRow(row: BookingRow): Booking {
@@ -292,5 +293,6 @@ function mapRow(row: BookingRow): Booking {
     userId: row.user_id ?? undefined,
     status: row.status,
     createdAt: row.created_at ?? "",
+    isBackdated: row.is_backdated ?? false,
   };
 }

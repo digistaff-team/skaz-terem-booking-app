@@ -16,6 +16,7 @@ function makeBooking(over: Partial<Booking>): Booking {
     userName: "Иван",
     status: "active",
     createdAt: "",
+    isBackdated: false,
     ...over,
   };
 }
@@ -39,6 +40,17 @@ describe("computeStats", () => {
     expect(s.cancelled).toBe(1);
     expect(s.totalMinutes).toBe(120);
     expect(s.byMonth[0].count).toBe(1);
+  });
+
+  it("backdatedMinutes/backdatedCount учитывают только is_backdated и входят в totalMinutes, не дополняют его", () => {
+    const s = computeStats([
+      makeBooking({ startTime: "10:00", endTime: "12:00" }), // 120, обычная
+      makeBooking({ startTime: "10:00", endTime: "11:00", isBackdated: true }), // 60, задним числом
+      makeBooking({ status: "cancelled", isBackdated: true }), // отменена — не считается вообще
+    ]);
+    expect(s.totalMinutes).toBe(180);
+    expect(s.backdatedMinutes).toBe(60);
+    expect(s.backdatedCount).toBe(1);
   });
 
   it("минуты считаются точно, средняя — по активным", () => {

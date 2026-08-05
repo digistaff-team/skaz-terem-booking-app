@@ -38,6 +38,9 @@ const MIGRATION6_PATH = fileURLToPath(
 const MIGRATION7_PATH = fileURLToPath(
   new URL("../../supabase-migrations-7-book-on-behalf.sql", import.meta.url)
 );
+const MIGRATION8_PATH = fileURLToPath(
+  new URL("../../supabase-migrations-8-backdated-flag.sql", import.meta.url)
+);
 
 // Тестовый токен: подставляется в private.app_config вместо продового
 const BOT_TOKEN = "7654321098:AAtest_token_for_local_verification_x";
@@ -139,7 +142,7 @@ beforeAll(async () => {
   `);
 
   // GRANT/REVOKE опускаем: ролей anon/authenticated/service_role в PGlite нет
-  for (const path of [MIGRATION_PATH, MIGRATION3_PATH, MIGRATION4_PATH, MIGRATION6_PATH, MIGRATION7_PATH]) {
+  for (const path of [MIGRATION_PATH, MIGRATION3_PATH, MIGRATION4_PATH, MIGRATION6_PATH, MIGRATION7_PATH, MIGRATION8_PATH]) {
     const migration = readFileSync(path, "utf8")
       .split("\n")
       .filter((l) => !/^\s*(GRANT|REVOKE)\s/i.test(l))
@@ -222,6 +225,7 @@ describe("create_booking: атомарная конфликт-логика", () 
     expect(b.status).toBe("active");
     expect(b.user_id).toBe(ivanId);
     expect(b.date).toBe(tomorrow);
+    expect(b.is_backdated).toBe(false);
     bookingId = b.id as string;
   });
 
@@ -474,6 +478,7 @@ describe("депозит часов (миграция 3)", () => {
       const r = await book(olegInit, "floor-1-34", "10:00", "11:00", daysAgo(10));
       expect(r.rows[0].b.status).toBe("active");
       expect(r.rows[0].b.date).toBe(daysAgo(10));
+      expect(r.rows[0].b.is_backdated).toBe(true); // миграция 8
     });
 
     it("админ не может забронировать глубже 30 дней назад → INVALID_INPUT", async () => {
@@ -495,6 +500,7 @@ describe("депозит часов (миграция 3)", () => {
       const b = r.rows[0].b;
       expect(b.user_id).toBe(ivanId);
       expect(b.user_name).toBe("Иван Ёж Тёркин-Léon"); // имя сервер берёт из профиля резидента, не из p_user_name
+      expect(b.is_backdated).toBe(true); // миграция 8
     });
 
     it("бронь от имени несуществующего резидента → USER_NOT_FOUND", async () => {

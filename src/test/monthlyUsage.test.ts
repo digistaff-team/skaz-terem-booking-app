@@ -17,6 +17,7 @@ function makeBooking(over: Partial<Booking>): Booking {
     userName: "Иван",
     status: "active",
     createdAt: "",
+    isBackdated: false,
     ...over,
   };
 }
