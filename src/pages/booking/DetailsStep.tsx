@@ -9,9 +9,12 @@ interface DetailsStepProps {
   userName: string;
 }
 
-export function DetailsStep({ onSubmit, userName }: DetailsStepProps) {
+const isRespFieldEditable = import.meta.env.VITE_EDIT_RESP_FIELD === "true";
+
+export function DetailsStep({ onSubmit, userName: initialUserName }: DetailsStepProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [userName, setUserName] = useState(initialUserName);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
 
   useEffect(() => {
@@ -52,7 +55,14 @@ export function DetailsStep({ onSubmit, userName }: DetailsStepProps) {
         </div>
         <div>
           <Label htmlFor="name">Ответственный</Label>
-          <Input id="name" value={userName} readOnly disabled className="mt-1.5" />
+          <Input
+            id="name"
+            value={userName}
+            onChange={isRespFieldEditable ? (e) => setUserName(e.target.value) : undefined}
+            readOnly={!isRespFieldEditable}
+            disabled={!isRespFieldEditable}
+            className="mt-1.5"
+          />
         </div>
         <Button type="submit" className="w-full" size="lg">Далее</Button>
       </div>
