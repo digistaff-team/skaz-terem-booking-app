@@ -75,7 +75,9 @@ export interface AddBookingResult {
 }
 
 export async function addBooking(
-  booking: Omit<Booking, "id" | "createdAt" | "status">
+  booking: Omit<Booking, "id" | "createdAt" | "status">,
+  /** Только для админов: бронь и списание часов оформляются на этого резидента. */
+  onBehalfOfChatId?: number
 ): Promise<AddBookingResult> {
   const initData = getInitData();
   if (!initData) throw new Error(NO_TELEGRAM_ERROR);
@@ -92,6 +94,7 @@ export async function addBooking(
     p_title: booking.title,
     p_description: booking.description,
     p_user_name: booking.userName,
+    p_on_behalf_of_chat_id: onBehalfOfChatId ?? null,
   });
 
   if (error) throw new Error(translateRpcError(error.message));

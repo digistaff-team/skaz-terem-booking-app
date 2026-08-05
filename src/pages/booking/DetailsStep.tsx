@@ -1,24 +1,38 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth";
+import { adminListUsers, adminUserName } from "@/lib/adminStore";
 
 interface DetailsStepProps {
-  onSubmit: (title: string, desc: string, name: string) => void;
+  onSubmit: (title: string, desc: string, name: string, onBehalfOfChatId?: number) => void;
   userName: string;
 }
 
 const respFieldEditEnabled = import.meta.env.VITE_EDIT_RESP_FIELD === "true";
+
+// Стили нативного <select> в тон Input (см. Admin.tsx)
+const selectClass =
+  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm " +
+  "ring-offset-background focus-visible:outline-none focus-visible:ring-2 " +
+  "focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
 export function DetailsStep({ onSubmit, userName: initialUserName }: DetailsStepProps) {
   const { user } = useAuth();
   const isRespFieldEditable = respFieldEditEnabled && !!user?.isAdmin;
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [userName, setUserName] = useState(initialUserName);
+  const [onBehalfChatId, setOnBehalfChatId] = useState(""); // "" = сам админ
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+
+  const { data: users = [] } = useQuery({
+    queryKey: ["adminUsers"],
+    queryFn: adminListUsers,
+    enabled: isRespFieldEditable,
+  });
 
   useEffect(() => {
     const vv = window.visualViewport;
@@ -35,13 +49,21 @@ export function DetailsStep({ onSubmit, userName: initialUserName }: DetailsStep
     };
   }, []);
 
+  const selectedUser = users.find((u) => String(u.chatId) === onBehalfChatId);
+  const displayName = selectedUser ? adminUserName(selectedUser) : initialUserName;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
       toast.error("Введите название мероприятия");
       return;
     }
-    onSubmit(title.trim(), description.trim(), userName.trim());
+    onSubmit(
+      title.trim(),
+      description.trim(),
+      displayName.trim(),
+      selectedUser ? selectedUser.chatId : undefined
+    );
   };
 
   return (
@@ -58,14 +80,23 @@ export function DetailsStep({ onSubmit, userName: initialUserName }: DetailsStep
         </div>
         <div>
           <Label htmlFor="name">Ответственный</Label>
-          <Input
-            id="name"
-            value={userName}
-            onChange={isRespFieldEditable ? (e) => setUserName(e.target.value) : undefined}
-            readOnly={!isRespFieldEditable}
-            disabled={!isRespFieldEditable}
-            className="mt-1.5"
-          />
+          {isRespFieldEditable ? (
+            <select
+              id="name"
+              className={selectClass + " mt-1.5"}
+              value={onBehalfChatId}
+              onChange={(e) => setOnBehalfChatId(e.target.value)}
+            >
+              <option value="">Я сам ({initialUserName})</option>
+              {users.map((u) => (
+                <option key={u.chatId} value={String(u.chatId)}>
+                  {adminUserName(u)}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <Input id="name" value={initialUserName} readOnly disabled className="mt-1.5" />
+          )}
         </div>
         <Button type="submit" className="w-full" size="lg">Далее</Button>
       </div>

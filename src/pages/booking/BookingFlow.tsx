@@ -38,7 +38,8 @@ const BookingFlow = () => {
   const queryClient = useQueryClient();
 
   const bookMutation = useMutation({
-    mutationFn: (payload: Omit<Booking, "id" | "createdAt" | "status">) => addBooking(payload),
+    mutationFn: ({ onBehalfOfChatId, ...payload }: Omit<Booking, "id" | "createdAt" | "status"> & { onBehalfOfChatId?: number }) =>
+      addBooking(payload, onBehalfOfChatId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myBookings"] });
       queryClient.invalidateQueries({ queryKey: ["account"] });
@@ -134,9 +135,9 @@ const BookingFlow = () => {
     setStep("details");
   };
 
-  const handleDetailsSubmit = (title: string, description: string, name: string) => {
+  const handleDetailsSubmit = (title: string, description: string, name: string, onBehalfOfChatId?: number) => {
     const userName = name || (user ? getUserName(user) : "Гость");
-    setFormData((p) => ({ ...p, title, description, userName }));
+    setFormData((p) => ({ ...p, title, description, userName, onBehalfOfChatId }));
     setStep("confirm");
   };
 
@@ -154,6 +155,7 @@ const BookingFlow = () => {
         title: formData.title,
         description: formData.description || "",
         userName: formData.userName || getUserName(user),
+        onBehalfOfChatId: formData.onBehalfOfChatId,
       });
 
       toast.success("Помещение успешно забронировано!\nКод от ключницы — в карточке брони.");

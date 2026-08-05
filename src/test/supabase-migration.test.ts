@@ -35,6 +35,9 @@ const MIGRATION4_PATH = fileURLToPath(
 const MIGRATION6_PATH = fileURLToPath(
   new URL("../../supabase-migrations-6-backdated-admin-bookings.sql", import.meta.url)
 );
+const MIGRATION7_PATH = fileURLToPath(
+  new URL("../../supabase-migrations-7-book-on-behalf.sql", import.meta.url)
+);
 
 // Тестовый токен: подставляется в private.app_config вместо продового
 const BOT_TOKEN = "7654321098:AAtest_token_for_local_verification_x";
@@ -101,11 +104,12 @@ function book(
   room: string,
   start: string,
   end: string,
-  date: string = tomorrow
+  date: string = tomorrow,
+  onBehalfOfChatId: number | null = null
 ) {
   return db.query<{ b: Record<string, unknown> }>(
-    "SELECT public.create_booking($1,$2,$3,$4,$5,$6,$7,$8,$9) AS b",
-    [init, room, "Тестовая комната", date, start, end, "Комната | Тест | Иван", "", "Иван"]
+    "SELECT public.create_booking($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) AS b",
+    [init, room, "Тестовая комната", date, start, end, "Комната | Тест | Иван", "", "Иван", onBehalfOfChatId]
   );
 }
 
@@ -135,7 +139,7 @@ beforeAll(async () => {
   `);
 
   // GRANT/REVOKE опускаем: ролей anon/authenticated/service_role в PGlite нет
-  for (const path of [MIGRATION_PATH, MIGRATION3_PATH, MIGRATION4_PATH, MIGRATION6_PATH]) {
+  for (const path of [MIGRATION_PATH, MIGRATION3_PATH, MIGRATION4_PATH, MIGRATION6_PATH, MIGRATION7_PATH]) {
     const migration = readFileSync(path, "utf8")
       .split("\n")
       .filter((l) => !/^\s*(GRANT|REVOKE)\s/i.test(l))
@@ -483,6 +487,27 @@ describe("депозит часов (миграция 3)", () => {
       await expectRpcError(
         book(mariaInit, "floor-2-room-11", "10:00", "11:00", daysAgo(5)),
         "INVALID_INPUT"
+      );
+    });
+
+    it("админ бронирует от имени резидента — миграция 7: владелец и списание закреплены за резидентом", async () => {
+      const r = await book(olegInit, "floor-2-office-6", "09:00", "10:00", daysAgo(3), ivan.id);
+      const b = r.rows[0].b;
+      expect(b.user_id).toBe(ivanId);
+      expect(b.user_name).toBe("Иван Ёж Тёркин-Léon"); // имя сервер берёт из профиля резидента, не из p_user_name
+    });
+
+    it("бронь от имени несуществующего резидента → USER_NOT_FOUND", async () => {
+      await expectRpcError(
+        book(olegInit, "floor-2-office-6", "11:00", "12:00", daysAgo(3), 999999999),
+        "USER_NOT_FOUND"
+      );
+    });
+
+    it("не-админ не может бронировать от имени другого резидента → ADMIN_ONLY", async () => {
+      await expectRpcError(
+        book(mariaInit, "floor-2-room-11", "08:00", "09:00", in2days, ivan.id),
+        "ADMIN_ONLY"
       );
     });
 

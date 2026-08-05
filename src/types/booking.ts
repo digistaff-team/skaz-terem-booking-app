@@ -44,4 +44,6 @@ export interface BookingFormData {
   title: string;
   description: string;
   userName: string;
+  /** Только для админов: бронь оформляется на этого резидента (его chat_id). */
+  onBehalfOfChatId?: number;
 }
