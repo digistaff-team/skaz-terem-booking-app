@@ -32,6 +32,9 @@ const MIGRATION3_PATH = fileURLToPath(
 const MIGRATION4_PATH = fileURLToPath(
   new URL("../../supabase-migrations-4-admin.sql", import.meta.url)
 );
+const MIGRATION6_PATH = fileURLToPath(
+  new URL("../../supabase-migrations-6-backdated-admin-bookings.sql", import.meta.url)
+);
 
 // Тестовый токен: подставляется в private.app_config вместо продового
 const BOT_TOKEN = "7654321098:AAtest_token_for_local_verification_x";
@@ -91,6 +94,7 @@ let mariaId: string;
 
 const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 const in2days = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+const daysAgo = (n: number) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
 
 function book(
   init: string,
@@ -131,7 +135,7 @@ beforeAll(async () => {
   `);
 
   // GRANT/REVOKE опускаем: ролей anon/authenticated/service_role в PGlite нет
-  for (const path of [MIGRATION_PATH, MIGRATION3_PATH, MIGRATION4_PATH]) {
+  for (const path of [MIGRATION_PATH, MIGRATION3_PATH, MIGRATION4_PATH, MIGRATION6_PATH]) {
     const migration = readFileSync(path, "utf8")
       .split("\n")
       .filter((l) => !/^\s*(GRANT|REVOKE)\s/i.test(l))
@@ -460,6 +464,26 @@ describe("депозит часов (миграция 3)", () => {
       expect(olegRow).toBeDefined();
       expect((olegRow!.balances as { room_id: string }[]).map((b) => b.room_id).sort())
         .toEqual(["floor-1-34", "whole-house"]);
+    });
+
+    it("админ может забронировать задним числом (не глубже 30 дней) — миграция 6", async () => {
+      const r = await book(olegInit, "floor-1-34", "10:00", "11:00", daysAgo(10));
+      expect(r.rows[0].b.status).toBe("active");
+      expect(r.rows[0].b.date).toBe(daysAgo(10));
+    });
+
+    it("админ не может забронировать глубже 30 дней назад → INVALID_INPUT", async () => {
+      await expectRpcError(
+        book(olegInit, "floor-2-hall-20", "10:00", "11:00", daysAgo(31)),
+        "INVALID_INPUT"
+      );
+    });
+
+    it("не-админу бронь задним числом недоступна, даже в пределах 30 дней", async () => {
+      await expectRpcError(
+        book(mariaInit, "floor-2-room-11", "10:00", "11:00", daysAgo(5)),
+        "INVALID_INPUT"
+      );
     });
 
     it("админ начисляет часы другому пользователю; в комментарии остаётся след аудита", async () => {

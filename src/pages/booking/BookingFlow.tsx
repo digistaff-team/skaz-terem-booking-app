@@ -66,10 +66,15 @@ const BookingFlow = () => {
     setStep("date");
   };
 
+  const minSelectableDate = user?.isAdmin ? localISODateInDays(-30) : toLocalISODate();
+
   const handleDateSelect = (date: string) => {
-    const today = toLocalISODate();
-    if (date < today) {
-      toast.error("Эта дата в прошлом, выберите другую");
+    if (date < minSelectableDate) {
+      toast.error(
+        user?.isAdmin
+          ? "Задним числом можно бронировать не глубже 30 дней назад"
+          : "Эта дата в прошлом, выберите другую"
+      );
       return;
     }
     if (date > getMaxBookingDate()) {
@@ -259,7 +264,7 @@ const BookingFlow = () => {
               <Input
                 id="custom-date"
                 type="date"
-                min={toLocalISODate()}
+                min={minSelectableDate}
                 max={getMaxBookingDate()}
                 value={pendingDate}
                 onChange={(e) => {
@@ -271,6 +276,11 @@ const BookingFlow = () => {
                 }}
                 className="mt-2"
               />
+              {user?.isAdmin && (
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Как администратор вы можете указать дату до 30 дней назад — для пост-учёта посещаемости
+                </p>
+              )}
             </div>
           </div>
         )}
