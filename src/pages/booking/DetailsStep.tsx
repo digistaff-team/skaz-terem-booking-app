@@ -3,15 +3,18 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/lib/auth";
 
 interface DetailsStepProps {
   onSubmit: (title: string, desc: string, name: string) => void;
   userName: string;
 }
 
-const isRespFieldEditable = import.meta.env.VITE_EDIT_RESP_FIELD === "true";
+const respFieldEditEnabled = import.meta.env.VITE_EDIT_RESP_FIELD === "true";
 
 export function DetailsStep({ onSubmit, userName: initialUserName }: DetailsStepProps) {
+  const { user } = useAuth();
+  const isRespFieldEditable = respFieldEditEnabled && !!user?.isAdmin;
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [userName, setUserName] = useState(initialUserName);
