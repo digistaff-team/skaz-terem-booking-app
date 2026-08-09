@@ -149,7 +149,7 @@ const AdminStats = () => {
               <StatTile value={String(stats.uniqueUsers)} label="пользователей" />
               <StatTile
                 value={hoursLabel(stats.backdatedMinutes)}
-                label="Без брони"
+                label="Всего задним числом"
                 sub={
                   stats.backdatedCount > 0
                     ? `${stats.backdatedCount} ${bookingWord(stats.backdatedCount)} из ${stats.active} (${Math.round(stats.backdatedMinutes / (stats.totalMinutes || 1) * 100)}%)`
