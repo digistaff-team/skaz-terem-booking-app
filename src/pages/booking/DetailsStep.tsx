@@ -13,6 +13,7 @@ interface DetailsStepProps {
 }
 
 const respFieldEditEnabled = import.meta.env.VITE_EDIT_RESP_FIELD === "true";
+const NO_BOOKING_VALUE = "none"; // «Без брони» — использование без привязки к резиденту
 
 // Стили нативного <select> в тон Input (см. Admin.tsx)
 const selectClass =
@@ -50,7 +51,12 @@ export function DetailsStep({ onSubmit, userName: initialUserName }: DetailsStep
   }, []);
 
   const selectedUser = users.find((u) => String(u.chatId) === onBehalfChatId);
-  const displayName = selectedUser ? adminUserName(selectedUser) : initialUserName;
+  const isNoBookingSelected = onBehalfChatId === NO_BOOKING_VALUE;
+  const displayName = isNoBookingSelected
+    ? "Без брони"
+    : selectedUser
+    ? adminUserName(selectedUser)
+    : initialUserName;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,6 +94,7 @@ export function DetailsStep({ onSubmit, userName: initialUserName }: DetailsStep
               onChange={(e) => setOnBehalfChatId(e.target.value)}
             >
               <option value="">Я сам ({initialUserName})</option>
+              <option value={NO_BOOKING_VALUE}>Без брони</option>
               {users.map((u) => (
                 <option key={u.chatId} value={String(u.chatId)}>
                   {adminUserName(u)}
