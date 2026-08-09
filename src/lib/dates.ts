@@ -48,3 +48,15 @@ export function formatDateShort(isoDate: string): string {
   const weekday = d.toLocaleDateString("ru-RU", { weekday: "long" });
   return `${dayMonth}, ${weekday}`;
 }
+
+// Intl.DateTimeFormat не умеет склонять русские названия месяцев в предложный
+// падеж («август» → «августе») — только именительный/родительный.
+const MONTH_NAMES_PREPOSITIONAL = [
+  "январе", "феврале", "марте", "апреле", "мае", "июне",
+  "июле", "августе", "сентябре", "октябре", "ноябре", "декабре",
+];
+
+/** Название месяца в предложном падеже: «августе» (для «в {monthInPrepositional}»). */
+export function monthNamePrepositional(d: Date = new Date()): string {
+  return MONTH_NAMES_PREPOSITIONAL[d.getMonth()];
+}

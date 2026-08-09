@@ -3,6 +3,7 @@ import { getActiveBookingsForMonth } from "@/lib/bookingStore";
 import { computePersonalMonthUsage } from "@/lib/personalUsage";
 import { formatMinutes } from "@/lib/duration";
 import { useAuth } from "@/lib/auth";
+import { monthNamePrepositional } from "@/lib/dates";
 import { UserRound } from "lucide-react";
 
 /** Персональный месячный лимит часов бронирования (один на все помещения). */
@@ -10,7 +11,7 @@ const PersonalLimit = () => {
   const { user } = useAuth();
   const now = new Date();
   const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const monthName = now.toLocaleDateString("ru-RU", { month: "long" });
+  const monthName = monthNamePrepositional(now);
 
   const { data: monthBookings = [], isLoading } = useQuery({
     queryKey: ["personalMonthBookings", month, user?.id],

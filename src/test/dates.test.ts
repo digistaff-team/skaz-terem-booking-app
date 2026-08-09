@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toLocalISODate, localISODateInDays, currentTimeHHMM } from "@/lib/dates";
+import { toLocalISODate, localISODateInDays, currentTimeHHMM, monthNamePrepositional } from "@/lib/dates";
 
 describe("dates: локальные, а не UTC", () => {
   it("toLocalISODate возвращает локальную дату (не UTC)", () => {
@@ -23,5 +23,11 @@ describe("dates: локальные, а не UTC", () => {
   it("currentTimeHHMM даёт HH:MM с нулями", () => {
     expect(currentTimeHHMM(new Date(2026, 2, 15, 9, 5))).toBe("09:05");
     expect(currentTimeHHMM(new Date(2026, 2, 15, 23, 59))).toBe("23:59");
+  });
+
+  it("monthNamePrepositional склоняет месяц в предложный падеж", () => {
+    expect(monthNamePrepositional(new Date(2026, 7, 1))).toBe("августе");
+    expect(monthNamePrepositional(new Date(2026, 0, 1))).toBe("январе");
+    expect(monthNamePrepositional(new Date(2026, 4, 1))).toBe("мае");
   });
 });

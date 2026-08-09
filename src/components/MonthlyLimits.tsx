@@ -3,6 +3,7 @@ import { getActiveBookingsForMonth } from "@/lib/bookingStore";
 import { computeMonthUsage } from "@/lib/monthlyUsage";
 import { formatMinutes } from "@/lib/duration";
 import { rooms } from "@/data/rooms";
+import { monthNamePrepositional } from "@/lib/dates";
 import { CalendarClock } from "lucide-react";
 
 function roomLabel(roomId: string): string {
@@ -14,7 +15,7 @@ function roomLabel(roomId: string): string {
 const MonthlyLimits = () => {
   const now = new Date();
   const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const monthName = now.toLocaleDateString("ru-RU", { month: "long" });
+  const monthName = monthNamePrepositional(now);
 
   const { data: monthBookings = [], isLoading } = useQuery({
     queryKey: ["monthBookings", month],
