@@ -294,6 +294,7 @@ const BookingFlow = () => {
           roomIcon={selectedRoom!.icon}
           onSelect={handleTimeSelect}
           initialStartTime={formData.startTime || null}
+          isAdmin={user?.isAdmin}
         />}
 
         {step === "details" && <DetailsStep onSubmit={handleDetailsSubmit} userName={user ? getUserName(user) : ""} />}

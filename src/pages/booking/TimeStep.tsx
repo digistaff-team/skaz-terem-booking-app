@@ -16,9 +16,10 @@ interface TimeStepProps {
   roomIcon: string;
   onSelect: (start: string, end: string) => void;
   initialStartTime?: string | null;
+  isAdmin?: boolean;
 }
 
-export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialStartTime }: TimeStepProps) {
+export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialStartTime, isAdmin }: TimeStepProps) {
   const [startTime, setStartTime] = useState<string | null>(initialStartTime || null);
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
@@ -48,7 +49,7 @@ export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialSt
               const today = toLocalISODate();
               const isToday = date === today;
               const currentHour = new Date().getHours();
-              const visibleSlots = (isToday
+              const visibleSlots = (isToday && !isAdmin
                 ? TIME_SLOTS.filter((t) => parseInt(t) > currentHour)
                 : TIME_SLOTS
               ).filter((t) => !isStartBlocked(existingBookings, t));
