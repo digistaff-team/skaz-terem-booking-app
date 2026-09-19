@@ -45,6 +45,7 @@ const BookingFlow = () => {
       queryClient.invalidateQueries({ queryKey: ["account"] });
       queryClient.invalidateQueries({ queryKey: ["monthBookings"] });
       queryClient.invalidateQueries({ queryKey: ["personalMonthBookings"] });
+      queryClient.invalidateQueries({ queryKey: ["myBookingsHistory"] });
     },
   });
 

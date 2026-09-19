@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import BookingsList from "@/components/BookingsList";
 import PersonalLimit from "@/components/PersonalLimit";
 import MonthlyLimits from "@/components/MonthlyLimits";
+import MyMonthlyStats from "@/components/MyMonthlyStats";
 import { ArrowLeft, CircleDollarSign, BarChart3, ClipboardList } from "lucide-react";
 
 const Account = () => {
@@ -28,6 +29,7 @@ const Account = () => {
         </section>
 
         <PersonalLimit />
+        <MyMonthlyStats />
         <MonthlyLimits />
 
         <div className="mt-8 space-y-3">
