@@ -3,6 +3,8 @@ import {
   periodRange,
   isRangeInvalid,
   defaultCustomRange,
+  shouldUseDayChart,
+  DAY_CHART_MAX_DAYS,
   PERIODS,
   type CustomRange,
 } from "@/lib/statsPeriod";
@@ -80,5 +82,53 @@ describe("PERIODS", () => {
   it("пять пресетов, последний — произвольный", () => {
     expect(PERIODS).toHaveLength(5);
     expect(PERIODS[4]).toEqual({ key: "custom", label: "Свой период" });
+  });
+});
+
+describe("shouldUseDayChart", () => {
+  const DATES = ["2026-06-01", "2026-08-01", "2026-08-15"];
+
+  it("порог — 62 дня", () => {
+    expect(DAY_CHART_MAX_DAYS).toBe(62);
+  });
+
+  it("обе границы заданы, длина в пределах порога — дни", () => {
+    expect(shouldUseDayChart({ from: "2026-08-01", to: "2026-08-15" }, DATES)).toBe(true);
+  });
+
+  it("один день — дни", () => {
+    expect(shouldUseDayChart({ from: "2026-08-01", to: "2026-08-01" }, DATES)).toBe(true);
+  });
+
+  it("ровно DAY_CHART_MAX_DAYS дней включительно — ещё дни", () => {
+    // 62 дня от 01.08 включительно → 01.10
+    expect(shouldUseDayChart({ from: "2026-08-01", to: "2026-10-01" }, DATES)).toBe(true);
+  });
+
+  it("на день больше порога — месяцы", () => {
+    expect(shouldUseDayChart({ from: "2026-08-01", to: "2026-10-02" }, DATES)).toBe(false);
+  });
+
+  it("незаданные границы берутся из дат броней", () => {
+    // min = 2026-06-01, max = 2026-08-15 → больше 62 дней
+    expect(shouldUseDayChart({}, DATES)).toBe(false);
+    // нижняя граница есть, верхняя подставляется из max = 2026-08-15 → 15 дней
+    expect(shouldUseDayChart({ from: "2026-08-01" }, DATES)).toBe(true);
+    // верхняя граница есть, нижняя подставляется из min = 2026-06-01 → больше 62 дней
+    expect(shouldUseDayChart({ to: "2026-08-15" }, DATES)).toBe(false);
+  });
+
+  it("нет броней и незаданная граница — месяцы, без падения", () => {
+    expect(shouldUseDayChart({}, [])).toBe(false);
+    expect(shouldUseDayChart({ from: "2026-08-01" }, [])).toBe(false);
+  });
+
+  it("невалидный диапазон — месяцы", () => {
+    expect(shouldUseDayChart({ from: "2026-08-15", to: "2026-08-01" }, DATES)).toBe(false);
+  });
+
+  it("переход через смену времени не ломает счёт дней", () => {
+    // Последнее воскресенье октября — перевод часов в ряде зон.
+    expect(shouldUseDayChart({ from: "2026-10-24", to: "2026-10-26" }, DATES)).toBe(true);
   });
 });

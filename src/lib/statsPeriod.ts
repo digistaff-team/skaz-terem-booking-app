@@ -1,4 +1,4 @@
-import { toLocalISODate } from "./dates";
+import { toLocalISODate, parseLocalDate } from "./dates";
 
 export type Period = "all" | "thisMonth" | "prevMonth" | "30d" | "custom";
 
@@ -57,4 +57,38 @@ export function defaultCustomRange(today: Date = new Date()): CustomRange {
     from: toLocalISODate(new Date(today.getFullYear(), today.getMonth(), 1)),
     to: toLocalISODate(today),
   };
+}
+
+/** Выше этого числа дней дневной график превращается в частокол — рисуем месяцы. */
+export const DAY_CHART_MAX_DAYS = 62;
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** true, если диапазон укладывается в DAY_CHART_MAX_DAYS.
+ * Длина включительная: from === to → 1 день.
+ * Незаданные границы подставляются из min/max дат броней; если броней нет —
+ * подставить нечего, отдаём false (рисуем месяцы). */
+export function shouldUseDayChart(range: DateRange, bookingDates: string[]): boolean {
+  let from = range.from;
+  let to = range.to;
+
+  if (!from || !to) {
+    if (bookingDates.length === 0) return false;
+    let min = bookingDates[0];
+    let max = bookingDates[0];
+    for (const d of bookingDates) {
+      if (d < min) min = d;
+      if (d > max) max = d;
+    }
+    from = from ?? min;
+    to = to ?? max;
+  }
+
+  if (from > to) return false;
+
+  // parseLocalDate даёт локальный полдень, round добивает возможный сдвиг
+  // на час при переводе времени.
+  const days =
+    Math.round((parseLocalDate(to).getTime() - parseLocalDate(from).getTime()) / MS_PER_DAY) + 1;
+  return days <= DAY_CHART_MAX_DAYS;
 }
