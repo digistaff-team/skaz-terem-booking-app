@@ -8,6 +8,12 @@ export interface MonthStat {
   minutes: number;
 }
 
+export interface DayStat {
+  date: string; // YYYY-MM-DD
+  count: number;
+  minutes: number;
+}
+
 export interface RoomStat {
   roomId: string;
   roomName: string;
@@ -35,6 +41,8 @@ export interface BookingStats {
   backdatedMinutes: number;
   uniqueUsers: number;
   byMonth: MonthStat[]; // отсортировано по месяцу
+  /** Активные брони по дням, по возрастанию даты. Дни без броней отсутствуют. */
+  byDay: DayStat[];
   byRoom: RoomStat[]; // отсортировано по минутам, убыв.
   /** Счётчик активных броней по дням недели: индекс 0 = понедельник … 6 = воскресенье. */
   byWeekday: number[];
@@ -52,6 +60,7 @@ export function computeStats(bookings: Booking[], topUsersLimit = 10): BookingSt
   const totalMinutes = active.reduce((s, b) => s + durationMinutes(b.startTime, b.endTime), 0);
 
   const byMonth = new Map<string, MonthStat>();
+  const byDay = new Map<string, DayStat>();
   const byRoom = new Map<string, RoomStat>();
   const byUser = new Map<string, UserStat>();
   const byWeekday = new Array(7).fill(0);
@@ -72,6 +81,11 @@ export function computeStats(bookings: Booking[], topUsersLimit = 10): BookingSt
     m.count++;
     m.minutes += minutes;
     byMonth.set(month, m);
+
+    const d = byDay.get(b.date) ?? { date: b.date, count: 0, minutes: 0 };
+    d.count++;
+    d.minutes += minutes;
+    byDay.set(b.date, d);
 
     const r = byRoom.get(b.roomId) ?? { roomId: b.roomId, roomName: b.roomName, count: 0, minutes: 0 };
     r.count++;
@@ -98,6 +112,7 @@ export function computeStats(bookings: Booking[], topUsersLimit = 10): BookingSt
     backdatedMinutes,
     uniqueUsers: new Set(bookings.map((b) => b.userName)).size,
     byMonth: [...byMonth.values()].sort((a, b) => a.month.localeCompare(b.month)),
+    byDay: [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date)),
     byRoom: [...byRoom.values()].sort((a, b) => b.minutes - a.minutes),
     byWeekday,
     byStartHour,
@@ -118,3 +133,9 @@ export function formatMonthLabel(month: string, currentYear = new Date().getFull
 }
 
 export const WEEKDAY_LABELS = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"];
+
+/** '2026-08-01' → '1.08'. Месяц нужен: диапазон может пересекать его границу. */
+export function formatDayLabel(isoDate: string): string {
+  const [, m, d] = isoDate.split("-");
+  return `${Number(d)}.${m}`;
+}
