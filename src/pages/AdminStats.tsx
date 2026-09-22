@@ -97,8 +97,15 @@ const AdminStats = () => {
   const maxHour = Math.max(...stats.byStartHour, 1);
   const peakHour = stats.byStartHour.indexOf(maxHour);
   const maxDay = Math.max(...stats.byDay.map((d) => d.minutes), 1);
+  const peakDayIndex = stats.byDay.findIndex((d) => d.minutes === maxDay);
   // Подписей под столбцами — не больше десяти, иначе на телефоне они слипаются.
   const dayLabelStep = Math.ceil(stats.byDay.length / 10) || 1;
+  // Подписываем каждый dayLabelStep-й столбец и обязательно последний —
+  // конец выбранного диапазона. Регулярную подпись у самого края пропускаем,
+  // чтобы она не столкнулась с последней.
+  const showDayLabel = (i: number) =>
+    i === stats.byDay.length - 1 ||
+    (i % dayLabelStep === 0 && stats.byDay.length - 1 - i >= dayLabelStep);
 
   return (
     <div className="min-h-screen warm-glow">
@@ -209,7 +216,7 @@ const AdminStats = () => {
                 <div className="flex items-end gap-px h-32">
                   {stats.byDay.map((d, i) => (
                     <div key={d.date} className="flex-1 flex flex-col items-center justify-end gap-1 min-w-0">
-                      {stats.byDay.length <= 15 && (
+                      {(stats.byDay.length <= 15 || i === peakDayIndex) && (
                         <span className="text-xs text-foreground font-medium">{hoursLabel(d.minutes)}</span>
                       )}
                       <div
@@ -218,7 +225,7 @@ const AdminStats = () => {
                         title={`${formatDayLabel(d.date)}: ${d.count} ${bookingWord(d.count)}, ${hoursLabel(d.minutes)}`}
                       />
                       <span className="h-3 text-[10px] leading-none text-muted-foreground">
-                        {i % dayLabelStep === 0 ? formatDayLabel(d.date) : ""}
+                        {showDayLabel(i) ? formatDayLabel(d.date) : ""}
                       </span>
                     </div>
                   ))}
