@@ -134,7 +134,9 @@ export function formatMonthLabel(month: string, currentYear = new Date().getFull
 
 export const WEEKDAY_LABELS = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"];
 
-/** '2026-08-01' → '1.08'. Месяц нужен: диапазон может пересекать его границу. */
+/** '2026-08-01' → '1.08'. Месяц нужен: диапазон может пересекать его границу.
+ * День без ведущего нуля, месяц с ним — так подпись под столбцом короче,
+ * а порядок «день.месяц» остаётся однозначным. */
 export function formatDayLabel(isoDate: string): string {
   const [, m, d] = isoDate.split("-");
   return `${Number(d)}.${m}`;
