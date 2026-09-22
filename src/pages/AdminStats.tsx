@@ -16,6 +16,7 @@ import {
 } from "@/lib/statsPeriod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ArrowLeft, BarChart3 } from "lucide-react";
 
 // Цвет заливки — токен accent (hsl(25 60% 45%) ≈ #B8672E): контраст с карточкой
@@ -61,6 +62,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 const AdminStats = () => {
   const { user } = useAuth();
   const [period, setPeriod] = useState<Period>("all");
+  // Ленивый инициализатор React — вызывается один раз при монтировании.
   const [custom, setCustom] = useState<CustomRange>(defaultCustomRange);
 
   const { data: allBookings = [], isLoading } = useQuery({
@@ -123,24 +125,26 @@ const AdminStats = () => {
 
         {period === "custom" && (
           <div className="mb-6 flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 text-sm text-muted-foreground">
-              с
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Label htmlFor="stats-from">с</Label>
               <Input
+                id="stats-from"
                 type="date"
                 value={custom.from}
                 onChange={(e) => setCustom((c) => ({ ...c, from: e.target.value }))}
                 className="h-9 w-auto text-foreground"
               />
-            </label>
-            <label className="flex items-center gap-2 text-sm text-muted-foreground">
-              по
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Label htmlFor="stats-to">по</Label>
               <Input
+                id="stats-to"
                 type="date"
                 value={custom.to}
                 onChange={(e) => setCustom((c) => ({ ...c, to: e.target.value }))}
                 className="h-9 w-auto text-foreground"
               />
-            </label>
+            </div>
           </div>
         )}
 
