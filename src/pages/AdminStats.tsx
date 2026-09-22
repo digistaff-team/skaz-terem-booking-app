@@ -24,10 +24,15 @@ import { ArrowLeft, BarChart3 } from "lucide-react";
 // Один цвет на все графики: везде одна метрика (sequential), серий нет.
 
 /** Часы одним числом: 994,6 → «995 ч», 8.5 → «8,5 ч». */
-function hoursLabel(minutes: number): string {
+/** Часы без единицы измерения: «2,5». Для подписей над столбцами, где мало места. */
+function hoursValue(minutes: number): string {
   const h = minutes / 60;
   const rounded = h >= 20 ? Math.round(h) : Math.round(h * 10) / 10;
-  return `${String(rounded).replace(".", ",")} ч`;
+  return String(rounded).replace(".", ",");
+}
+
+function hoursLabel(minutes: number): string {
+  return `${hoursValue(minutes)} ч`;
 }
 
 /** 1 → «бронь», 2-4 → «брони», 5+/11-14 → «броней». */
@@ -98,6 +103,9 @@ const AdminStats = () => {
   const peakHour = stats.byStartHour.indexOf(maxHour);
   const maxDay = Math.max(...stats.byDay.map((d) => d.minutes), 1);
   const peakDayIndex = stats.byDay.findIndex((d) => d.minutes === maxDay);
+  // Значение над каждым столбцом — только пока они не слипаются на телефоне
+  // (~310px на график, «12,5» в 10px — около 20px). Дальше подписываем только пик.
+  const DAY_VALUE_LABEL_MAX = 15;
   // Подписей под столбцами — не больше десяти, иначе на телефоне они слипаются.
   const dayLabelStep = Math.ceil(stats.byDay.length / 10) || 1;
   // Подписываем каждый dayLabelStep-й столбец и обязательно последний —
@@ -216,8 +224,8 @@ const AdminStats = () => {
                 <div className="flex items-end gap-px h-32">
                   {stats.byDay.map((d, i) => (
                     <div key={d.date} className="flex-1 flex flex-col items-center justify-end gap-1 min-w-0">
-                      {(stats.byDay.length <= 15 || i === peakDayIndex) && (
-                        <span className="text-xs text-foreground font-medium">{hoursLabel(d.minutes)}</span>
+                      {(stats.byDay.length <= DAY_VALUE_LABEL_MAX || i === peakDayIndex) && (
+                        <span className="text-[10px] leading-none text-foreground">{hoursValue(d.minutes)}</span>
                       )}
                       <div
                         className="w-full max-w-12 rounded-t bg-accent"
