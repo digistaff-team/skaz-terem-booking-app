@@ -84,7 +84,7 @@ export function shouldUseDayChart(range: DateRange, bookingDates: string[]): boo
     to = to ?? max;
   }
 
-  if (from > to) return false;
+  if (isRangeInvalid({ from, to })) return false;
 
   // parseLocalDate даёт локальный полдень, round добивает возможный сдвиг
   // на час при переводе времени.
