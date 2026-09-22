@@ -96,6 +96,9 @@ const AdminStats = () => {
   const maxWeekday = Math.max(...stats.byWeekday, 1);
   const maxHour = Math.max(...stats.byStartHour, 1);
   const peakHour = stats.byStartHour.indexOf(maxHour);
+  const maxDay = Math.max(...stats.byDay.map((d) => d.minutes), 1);
+  // Подписей под столбцами — не больше десяти, иначе на телефоне они слипаются.
+  const dayLabelStep = Math.ceil(stats.byDay.length / 10) || 1;
 
   return (
     <div className="min-h-screen warm-glow">
@@ -182,7 +185,7 @@ const AdminStats = () => {
             </div>
 
             {/* По месяцам */}
-            {stats.byMonth.length > 1 && (
+            {!dayChart && stats.byMonth.length > 1 && (
               <Section title="Часы брони по месяцам">
                 <div className="flex items-end gap-2 h-32">
                   {stats.byMonth.map((m) => (
@@ -194,6 +197,29 @@ const AdminStats = () => {
                         title={`${formatMonthLabel(m.month)}: ${m.count} броней, ${hoursLabel(m.minutes)}`}
                       />
                       <span className="text-xs text-muted-foreground">{formatMonthLabel(m.month)}</span>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {/* По дням */}
+            {dayChart && stats.byDay.length > 0 && (
+              <Section title="Часы брони по дням">
+                <div className="flex items-end gap-px h-32">
+                  {stats.byDay.map((d, i) => (
+                    <div key={d.date} className="flex-1 flex flex-col items-center justify-end gap-1 min-w-0">
+                      {stats.byDay.length <= 15 && (
+                        <span className="text-xs text-foreground font-medium">{hoursLabel(d.minutes)}</span>
+                      )}
+                      <div
+                        className="w-full max-w-12 rounded-t bg-accent"
+                        style={{ height: `${Math.max((d.minutes / maxDay) * 88, 3)}px` }}
+                        title={`${formatDayLabel(d.date)}: ${d.count} ${bookingWord(d.count)}, ${hoursLabel(d.minutes)}`}
+                      />
+                      <span className="h-3 text-[10px] leading-none text-muted-foreground">
+                        {i % dayLabelStep === 0 ? formatDayLabel(d.date) : ""}
+                      </span>
                     </div>
                   ))}
                 </div>
