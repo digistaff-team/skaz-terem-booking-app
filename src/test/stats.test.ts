@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeStats, formatMonthLabel } from "@/lib/stats";
+import { computeStats, formatMonthLabel, formatDayLabel } from "@/lib/stats";
 import { Booking } from "@/types/booking";
 
 let seq = 0;
@@ -102,11 +102,55 @@ describe("computeStats", () => {
     ]);
     expect(s.uniqueUsers).toBe(2);
   });
+
+  it("byDay группирует по дням в хронологическом порядке", () => {
+    const s = computeStats([
+      makeBooking({ date: "2026-08-15" }),
+      makeBooking({ date: "2026-08-01" }),
+      makeBooking({ date: "2026-08-15" }),
+    ]);
+    expect(s.byDay.map((d) => d.date)).toEqual(["2026-08-01", "2026-08-15"]);
+  });
+
+  it("byDay суммирует брони одного дня", () => {
+    const s = computeStats([
+      makeBooking({ date: "2026-08-01", startTime: "10:00", endTime: "12:00" }),
+      makeBooking({ date: "2026-08-01", startTime: "14:00", endTime: "15:30" }),
+    ]);
+    expect(s.byDay).toEqual([{ date: "2026-08-01", count: 2, minutes: 210 }]);
+  });
+
+  it("byDay не содержит дней без броней — пропуски, а не нули", () => {
+    const s = computeStats([
+      makeBooking({ date: "2026-08-01" }),
+      makeBooking({ date: "2026-08-05" }),
+    ]);
+    expect(s.byDay).toHaveLength(2);
+  });
+
+  it("byDay не учитывает отменённые брони", () => {
+    const s = computeStats([
+      makeBooking({ date: "2026-08-01" }),
+      makeBooking({ date: "2026-08-02", status: "cancelled" }),
+    ]);
+    expect(s.byDay.map((d) => d.date)).toEqual(["2026-08-01"]);
+  });
+
+  it("пустой список даёт пустой byDay", () => {
+    expect(computeStats([]).byDay).toEqual([]);
+  });
 });
 
 describe("formatMonthLabel", () => {
   it("текущий год — без года, чужой — с годом", () => {
     expect(formatMonthLabel("2026-06", 2026)).toBe("июн");
     expect(formatMonthLabel("2025-12", 2026)).toBe("дек 25");
+  });
+});
+
+describe("formatDayLabel", () => {
+  it("день и месяц без года", () => {
+    expect(formatDayLabel("2026-08-01")).toBe("1.08");
+    expect(formatDayLabel("2026-12-31")).toBe("31.12");
   });
 });

@@ -2,42 +2,26 @@ import { useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getBookings } from "@/lib/bookingStore";
-import { computeStats, formatMonthLabel, WEEKDAY_LABELS } from "@/lib/stats";
+import { computeStats, formatMonthLabel, formatDayLabel, WEEKDAY_LABELS } from "@/lib/stats";
 import { formatMinutes } from "@/lib/duration";
 import { useAuth } from "@/lib/auth";
-import { toLocalISODate, localISODateInDays } from "@/lib/dates";
+import {
+  PERIODS,
+  periodRange,
+  isRangeInvalid,
+  defaultCustomRange,
+  shouldUseDayChart,
+  type Period,
+  type CustomRange,
+} from "@/lib/statsPeriod";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ArrowLeft, BarChart3 } from "lucide-react";
 
 // Цвет заливки — токен accent (hsl(25 60% 45%) ≈ #B8672E): контраст с карточкой
 // ~4:1 (проверено валидатором dataviz-скилла; primary #E6801A даёт лишь 2.7:1).
 // Один цвет на все графики: везде одна метрика (sequential), серий нет.
-
-type Period = "all" | "thisMonth" | "prevMonth" | "30d";
-
-const PERIODS: { key: Period; label: string }[] = [
-  { key: "all", label: "Всё время" },
-  { key: "thisMonth", label: "Этот месяц" },
-  { key: "prevMonth", label: "Прошлый месяц" },
-  { key: "30d", label: "30 дней" },
-];
-
-function periodRange(period: Period): { from?: string; to?: string } {
-  const now = new Date();
-  switch (period) {
-    case "thisMonth":
-      return { from: toLocalISODate(new Date(now.getFullYear(), now.getMonth(), 1)) };
-    case "prevMonth":
-      return {
-        from: toLocalISODate(new Date(now.getFullYear(), now.getMonth() - 1, 1)),
-        to: toLocalISODate(new Date(now.getFullYear(), now.getMonth(), 0)),
-      };
-    case "30d":
-      return { from: localISODateInDays(-30) };
-    default:
-      return {};
-  }
-}
 
 /** Часы одним числом: 994,6 → «995 ч», 8.5 → «8,5 ч». */
 function hoursLabel(minutes: number): string {
@@ -78,6 +62,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 const AdminStats = () => {
   const { user } = useAuth();
   const [period, setPeriod] = useState<Period>("all");
+  // Ленивый инициализатор React — вызывается один раз при монтировании.
+  const [custom, setCustom] = useState<CustomRange>(defaultCustomRange);
 
   const { data: allBookings = [], isLoading } = useQuery({
     queryKey: ["allBookings"],
@@ -85,13 +71,21 @@ const AdminStats = () => {
     enabled: !!user?.isAdmin,
   });
 
+  const range = useMemo(() => periodRange(period, custom), [period, custom]);
+  const rangeInvalid = isRangeInvalid(range);
+
   const stats = useMemo(() => {
-    const { from, to } = periodRange(period);
+    const { from, to } = range;
     const rows = allBookings.filter(
       (b) => (!from || b.date >= from) && (!to || b.date <= to)
     );
     return computeStats(rows);
-  }, [allBookings, period]);
+  }, [allBookings, range]);
+
+  const dayChart = useMemo(
+    () => shouldUseDayChart(range, allBookings.map((b) => b.date)),
+    [range, allBookings]
+  );
 
   if (user && !user.isAdmin) {
     return <Navigate to="/account" replace />;
@@ -102,6 +96,16 @@ const AdminStats = () => {
   const maxWeekday = Math.max(...stats.byWeekday, 1);
   const maxHour = Math.max(...stats.byStartHour, 1);
   const peakHour = stats.byStartHour.indexOf(maxHour);
+  const maxDay = Math.max(...stats.byDay.map((d) => d.minutes), 1);
+  const peakDayIndex = stats.byDay.findIndex((d) => d.minutes === maxDay);
+  // Подписей под столбцами — не больше десяти, иначе на телефоне они слипаются.
+  const dayLabelStep = Math.ceil(stats.byDay.length / 10) || 1;
+  // Подписываем каждый dayLabelStep-й столбец и обязательно последний —
+  // конец выбранного диапазона. Регулярную подпись у самого края пропускаем,
+  // чтобы она не столкнулась с последней.
+  const showDayLabel = (i: number) =>
+    i === stats.byDay.length - 1 ||
+    (i % dayLabelStep === 0 && stats.byDay.length - 1 - i >= dayLabelStep);
 
   return (
     <div className="min-h-screen warm-glow">
@@ -129,8 +133,37 @@ const AdminStats = () => {
           ))}
         </div>
 
+        {period === "custom" && (
+          <div className="mb-6 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Label htmlFor="stats-from">с</Label>
+              <Input
+                id="stats-from"
+                type="date"
+                value={custom.from}
+                onChange={(e) => setCustom((c) => ({ ...c, from: e.target.value }))}
+                className="h-9 w-auto text-foreground"
+              />
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Label htmlFor="stats-to">по</Label>
+              <Input
+                id="stats-to"
+                type="date"
+                value={custom.to}
+                onChange={(e) => setCustom((c) => ({ ...c, to: e.target.value }))}
+                className="h-9 w-auto text-foreground"
+              />
+            </div>
+          </div>
+        )}
+
         {isLoading ? (
           <p className="text-sm text-muted-foreground animate-pulse">⏳ Загружаю данные...</p>
+        ) : rangeInvalid ? (
+          <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+            Дата «с» позже даты «по»
+          </div>
         ) : stats.total === 0 ? (
           <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
             Нет бронирований за выбранный период
@@ -159,7 +192,7 @@ const AdminStats = () => {
             </div>
 
             {/* По месяцам */}
-            {stats.byMonth.length > 1 && (
+            {!dayChart && stats.byMonth.length > 1 && (
               <Section title="Часы брони по месяцам">
                 <div className="flex items-end gap-2 h-32">
                   {stats.byMonth.map((m) => (
@@ -171,6 +204,29 @@ const AdminStats = () => {
                         title={`${formatMonthLabel(m.month)}: ${m.count} броней, ${hoursLabel(m.minutes)}`}
                       />
                       <span className="text-xs text-muted-foreground">{formatMonthLabel(m.month)}</span>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {/* По дням */}
+            {dayChart && stats.byDay.length > 0 && (
+              <Section title="Часы брони по дням">
+                <div className="flex items-end gap-px h-32">
+                  {stats.byDay.map((d, i) => (
+                    <div key={d.date} className="flex-1 flex flex-col items-center justify-end gap-1 min-w-0">
+                      {(stats.byDay.length <= 15 || i === peakDayIndex) && (
+                        <span className="text-xs text-foreground font-medium">{hoursLabel(d.minutes)}</span>
+                      )}
+                      <div
+                        className="w-full max-w-12 rounded-t bg-accent"
+                        style={{ height: `${Math.max((d.minutes / maxDay) * 88, 3)}px` }}
+                        title={`${formatDayLabel(d.date)}: ${d.count} ${bookingWord(d.count)}, ${hoursLabel(d.minutes)}`}
+                      />
+                      <span className="h-3 text-[10px] leading-none text-muted-foreground">
+                        {showDayLabel(i) ? formatDayLabel(d.date) : ""}
+                      </span>
                     </div>
                   ))}
                 </div>
