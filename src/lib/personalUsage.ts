@@ -14,13 +14,14 @@ export interface PersonalMonthUsage {
  * отменённые игнорируются. В отличие от общего лимита по помещениям,
  * бронь «whole-house» считается один раз обычной длительностью —
  * лимит один общий на все помещения, а не per-room.
+ * Уборка (isCleaning) — служебное время админа, в личные часы не входит.
  */
 export function computePersonalMonthUsage(
   bookings: Booking[],
   userId: string
 ): PersonalMonthUsage {
   const usedMinutes = bookings
-    .filter((b) => b.status === "active" && b.userId === userId)
+    .filter((b) => b.status === "active" && b.userId === userId && !b.isCleaning)
     .reduce((s, b) => s + durationMinutes(b.startTime, b.endTime), 0);
 
   return {

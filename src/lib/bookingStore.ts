@@ -75,9 +75,11 @@ export interface AddBookingResult {
 }
 
 export async function addBooking(
-  booking: Omit<Booking, "id" | "createdAt" | "status">,
+  booking: Omit<Booking, "id" | "createdAt" | "status" | "isBackdated" | "isCleaning">,
   /** Только для админов: бронь и списание часов оформляются на этого резидента. */
-  onBehalfOfChatId?: number
+  onBehalfOfChatId?: number,
+  /** Только для админов: слот под уборку — сервер ставит «Фея чистоты» и не списывает часы. */
+  isCleaning = false
 ): Promise<AddBookingResult> {
   const initData = getInitData();
   if (!initData) throw new Error(NO_TELEGRAM_ERROR);
@@ -95,6 +97,8 @@ export async function addBooking(
     p_description: booking.description,
     p_user_name: booking.userName,
     p_on_behalf_of_chat_id: onBehalfOfChatId ?? null,
+    // Только когда нужно: обычные брони продолжают работать и до применения миграции 9.
+    ...(isCleaning ? { p_is_cleaning: true } : {}),
   });
 
   if (error) throw new Error(translateRpcError(error.message));
@@ -193,7 +197,7 @@ export async function getActiveBookingsForMonth(
 
   let query = supabase
     .from("bookings")
-    .select("id, room_id, room_name, date, start_time, end_time, title, description, user_name, user_id, status")
+    .select("id, room_id, room_name, date, start_time, end_time, title, description, user_name, user_id, status, is_cleaning")
     .gte("date", from)
     .lte("date", to)
     .eq("status", "active");
@@ -277,6 +281,7 @@ interface BookingRow {
   status: Booking["status"];
   created_at?: string | null;
   is_backdated?: boolean | null;
+  is_cleaning?: boolean | null;
 }
 
 function mapRow(row: BookingRow): Booking {
@@ -294,5 +299,6 @@ function mapRow(row: BookingRow): Booking {
     status: row.status,
     createdAt: row.created_at ?? "",
     isBackdated: row.is_backdated ?? false,
+    isCleaning: row.is_cleaning ?? false,
   };
 }

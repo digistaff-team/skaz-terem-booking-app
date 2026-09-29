@@ -16,9 +16,10 @@ export interface RoomMonthUsage {
  * Расход общего месячного лимита по каждому помещению.
  * На вход — брони одного календарного месяца; отменённые игнорируются.
  * Бронь «whole-house» расходует лимит каждого помещения.
+ * Уборка (isCleaning) — служебное время, пул жителей не расходует.
  */
 export function computeMonthUsage(bookings: Booking[]): RoomMonthUsage[] {
-  const active = bookings.filter((b) => b.status === "active");
+  const active = bookings.filter((b) => b.status === "active" && !b.isCleaning);
 
   return Object.entries(MONTHLY_LIMITS_MINUTES).map(([roomId, limitMinutes]) => {
     const usedMinutes = active

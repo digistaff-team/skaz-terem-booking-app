@@ -41,6 +41,9 @@ const MIGRATION7_PATH = fileURLToPath(
 const MIGRATION8_PATH = fileURLToPath(
   new URL("../../supabase-migrations-8-backdated-flag.sql", import.meta.url)
 );
+const MIGRATION9_PATH = fileURLToPath(
+  new URL("../../supabase-migrations-9-cleaning.sql", import.meta.url)
+);
 
 // Тестовый токен: подставляется в private.app_config вместо продового
 const BOT_TOKEN = "7654321098:AAtest_token_for_local_verification_x";
@@ -108,11 +111,12 @@ function book(
   start: string,
   end: string,
   date: string = tomorrow,
-  onBehalfOfChatId: number | null = null
+  onBehalfOfChatId: number | null = null,
+  isCleaning = false
 ) {
   return db.query<{ b: Record<string, unknown> }>(
-    "SELECT public.create_booking($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) AS b",
-    [init, room, "Тестовая комната", date, start, end, "Комната | Тест | Иван", "", "Иван", onBehalfOfChatId]
+    "SELECT public.create_booking($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) AS b",
+    [init, room, "Тестовая комната", date, start, end, "Комната | Тест | Иван", "", "Иван", onBehalfOfChatId, isCleaning]
   );
 }
 
@@ -142,7 +146,7 @@ beforeAll(async () => {
   `);
 
   // GRANT/REVOKE опускаем: ролей anon/authenticated/service_role в PGlite нет
-  for (const path of [MIGRATION_PATH, MIGRATION3_PATH, MIGRATION4_PATH, MIGRATION6_PATH, MIGRATION7_PATH, MIGRATION8_PATH]) {
+  for (const path of [MIGRATION_PATH, MIGRATION3_PATH, MIGRATION4_PATH, MIGRATION6_PATH, MIGRATION7_PATH, MIGRATION8_PATH, MIGRATION9_PATH]) {
     const migration = readFileSync(path, "utf8")
       .split("\n")
       .filter((l) => !/^\s*(GRANT|REVOKE)\s/i.test(l))
@@ -514,6 +518,49 @@ describe("депозит часов (миграция 3)", () => {
       await expectRpcError(
         book(mariaInit, "floor-2-room-11", "08:00", "09:00", in2days, ivan.id),
         "ADMIN_ONLY"
+      );
+    });
+
+    it("админ бронирует уборку — миграция 9: без имени резидента и без списания часов", async () => {
+      const before = await db.query<{ n: number }>(
+        "SELECT count(*)::INT AS n FROM balance_transactions"
+      );
+      const r = await book(olegInit, "floor-2-hall-20", "07:00", "08:00", in2days, null, true);
+      const b = r.rows[0].b;
+      expect(b.is_cleaning).toBe(true);
+      expect(b.user_name).toBe("Фея чистоты"); // сервер игнорирует p_user_name
+      expect(b.user_id).toBe(olegId); // остаётся за админом — он может её отменить
+      expect(b.charged_minutes).toBe(0);
+      const after = await db.query<{ n: number }>(
+        "SELECT count(*)::INT AS n FROM balance_transactions"
+      );
+      expect(after.rows[0].n).toBe(before.rows[0].n);
+
+      // Уборка занимает слот, как обычная бронь
+      await expectRpcError(
+        book(mariaInit, "floor-2-hall-20", "07:30", "08:30", in2days),
+        "BOOKING_CONFLICT"
+      );
+
+      // Отмена работает и ничего не возвращает
+      const c = await db.query<{ b: Record<string, unknown> }>(
+        "SELECT public.cancel_booking($1,$2) AS b",
+        [olegInit, b.id]
+      );
+      expect(c.rows[0].b.refund_minutes).toBe(0);
+    });
+
+    it("не-админ не может бронировать уборку → ADMIN_ONLY", async () => {
+      await expectRpcError(
+        book(mariaInit, "floor-2-room-11", "06:00", "07:00", in2days, null, true),
+        "ADMIN_ONLY"
+      );
+    });
+
+    it("уборка от имени резидента → INVALID_INPUT", async () => {
+      await expectRpcError(
+        book(olegInit, "floor-2-room-11", "06:00", "07:00", in2days, ivan.id, true),
+        "INVALID_INPUT"
       );
     });
 

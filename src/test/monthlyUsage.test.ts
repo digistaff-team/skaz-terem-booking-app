@@ -18,6 +18,7 @@ function makeBooking(over: Partial<Booking>): Booking {
     status: "active",
     createdAt: "",
     isBackdated: false,
+    isCleaning: false,
     ...over,
   };
 }
@@ -77,6 +78,11 @@ describe("computeMonthUsage", () => {
 
   it("отменённые брони не расходуют лимит", () => {
     const u = usageFor([makeBooking({ status: "cancelled" })], "floor-1-34");
+    expect(u.usedMinutes).toBe(0);
+  });
+
+  it("уборка не расходует лимит жителей", () => {
+    const u = usageFor([makeBooking({ isCleaning: true })], "floor-1-34");
     expect(u.usedMinutes).toBe(0);
   });
 

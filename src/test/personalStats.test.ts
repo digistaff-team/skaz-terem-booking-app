@@ -18,6 +18,7 @@ function makeBooking(over: Partial<Booking>): Booking {
     status: "active",
     createdAt: "",
     isBackdated: false,
+    isCleaning: false,
     ...over,
   };
 }
@@ -74,6 +75,14 @@ describe("computePersonalMonthlyStats", () => {
     );
     expect(stats[0].count).toBe(1);
     expect(stats[0].minutes).toBe(180);
+  });
+
+  it("уборка в личные часы не входит", () => {
+    const stats = computePersonalMonthlyStats(
+      [makeBooking({ date: "2026-06-10", isCleaning: true }), makeBooking({ date: "2026-07-10" })],
+      "user-1"
+    );
+    expect(stats.map((m) => m.month)).toEqual(["2026-07"]);
   });
 
   it("отменённые брони не учитываются, а пустой месяц выпадает из списка", () => {

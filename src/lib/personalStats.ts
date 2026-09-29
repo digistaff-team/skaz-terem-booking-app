@@ -20,7 +20,7 @@ export interface PersonalMonthStat {
  * История часов одного жителя по календарным месяцам: сколько часов он забронировал
  * в каждом месяце и как они разложились по помещениям.
  *
- * Отменённые брони и брони других жителей игнорируются; месяцы без броней в
+ * Отменённые брони, брони других жителей и уборка (служебное время админа) игнорируются; месяцы без броней в
  * результат не попадают (кабинет рисует столбик на каждый месяц из этого списка).
  * Бронь «Всего Терема» — отдельная строка со своей длительностью: она не
  * размазывается по комнатам, как в общем лимите (`computeMonthUsage`), потому что
@@ -38,7 +38,7 @@ export function computePersonalMonthlyStats(
   >();
 
   for (const b of bookings) {
-    if (b.status !== "active" || b.userId !== userId) continue;
+    if (b.status !== "active" || b.userId !== userId || b.isCleaning) continue;
 
     const month = b.date.slice(0, 7);
     const minutes = durationMinutes(b.startTime, b.endTime);

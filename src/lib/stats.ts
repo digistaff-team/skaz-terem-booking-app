@@ -52,8 +52,10 @@ export interface BookingStats {
 }
 
 /** Агрегаты по списку броней. Часы/графики считаются по активным броням;
- * отменённые участвуют только в счётчиках total/cancelled. */
-export function computeStats(bookings: Booking[], topUsersLimit = 10): BookingStats {
+ * отменённые участвуют только в счётчиках total/cancelled. Уборка
+ * (isCleaning) — служебное время, а не использование помещений: не считается вовсе. */
+export function computeStats(allBookings: Booking[], topUsersLimit = 10): BookingStats {
+  const bookings = allBookings.filter((b) => !b.isCleaning);
   const active = bookings.filter((b) => b.status === "active");
   const cancelled = bookings.length - active.length;
 

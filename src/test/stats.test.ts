@@ -17,6 +17,7 @@ function makeBooking(over: Partial<Booking>): Booking {
     status: "active",
     createdAt: "",
     isBackdated: false,
+    isCleaning: false,
     ...over,
   };
 }
@@ -51,6 +52,16 @@ describe("computeStats", () => {
     expect(s.totalMinutes).toBe(180);
     expect(s.backdatedMinutes).toBe(60);
     expect(s.backdatedCount).toBe(1);
+  });
+
+  it("уборка не считается ни в часах, ни в счётчиках, ни в топе", () => {
+    const s = computeStats([
+      makeBooking({ startTime: "10:00", endTime: "12:00" }), // 120
+      makeBooking({ startTime: "07:00", endTime: "08:00", userName: "Фея чистоты", isCleaning: true }),
+    ]);
+    expect(s.total).toBe(1);
+    expect(s.totalMinutes).toBe(120);
+    expect(s.topUsers.map((u) => u.userName)).not.toContain("Фея чистоты");
   });
 
   it("минуты считаются точно, средняя — по активным", () => {

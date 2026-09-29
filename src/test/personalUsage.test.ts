@@ -19,6 +19,7 @@ function makeBooking(over: Partial<Booking>): Booking {
     status: "active",
     createdAt: "",
     isBackdated: false,
+    isCleaning: false,
     ...over,
   };
 }
@@ -54,6 +55,11 @@ describe("computePersonalMonthUsage", () => {
       [makeBooking({ status: "cancelled" })],
       "user-1"
     );
+    expect(u.usedMinutes).toBe(0);
+  });
+
+  it("уборка в личные часы не входит", () => {
+    const u = computePersonalMonthUsage([makeBooking({ isCleaning: true })], "user-1");
     expect(u.usedMinutes).toBe(0);
   });
 

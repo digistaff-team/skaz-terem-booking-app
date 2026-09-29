@@ -38,8 +38,14 @@ const BookingFlow = () => {
   const queryClient = useQueryClient();
 
   const bookMutation = useMutation({
-    mutationFn: ({ onBehalfOfChatId, ...payload }: Omit<Booking, "id" | "createdAt" | "status"> & { onBehalfOfChatId?: number }) =>
-      addBooking(payload, onBehalfOfChatId),
+    mutationFn: ({
+      onBehalfOfChatId,
+      isCleaning,
+      ...payload
+    }: Omit<Booking, "id" | "createdAt" | "status" | "isBackdated" | "isCleaning"> & {
+      onBehalfOfChatId?: number;
+      isCleaning?: boolean;
+    }) => addBooking(payload, onBehalfOfChatId, isCleaning),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myBookings"] });
       queryClient.invalidateQueries({ queryKey: ["account"] });
@@ -136,9 +142,15 @@ const BookingFlow = () => {
     setStep("details");
   };
 
-  const handleDetailsSubmit = (title: string, description: string, name: string, onBehalfOfChatId?: number) => {
+  const handleDetailsSubmit = (
+    title: string,
+    description: string,
+    name: string,
+    onBehalfOfChatId?: number,
+    isCleaning?: boolean
+  ) => {
     const userName = name || (user ? getUserName(user) : "Гость");
-    setFormData((p) => ({ ...p, title, description, userName, onBehalfOfChatId }));
+    setFormData((p) => ({ ...p, title, description, userName, onBehalfOfChatId, isCleaning }));
     setStep("confirm");
   };
 
@@ -157,6 +169,7 @@ const BookingFlow = () => {
         description: formData.description || "",
         userName: formData.userName || getUserName(user),
         onBehalfOfChatId: formData.onBehalfOfChatId,
+        isCleaning: formData.isCleaning,
       });
 
       toast.success("Помещение успешно забронировано!\nКод от ключницы — в карточке брони.");

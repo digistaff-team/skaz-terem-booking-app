@@ -36,6 +36,8 @@ export interface Booking {
   createdAt: string;
   /** Бронь создана постфактум на уже прошедшую дату (пост-учёт посещаемости). */
   isBackdated: boolean;
+  /** Служебная бронь админа под уборку: без резидента и без списания часов. */
+  isCleaning: boolean;
 }
 
 export interface BookingFormData {
@@ -48,4 +50,6 @@ export interface BookingFormData {
   userName: string;
   /** Только для админов: бронь оформляется на этого резидента (его chat_id). */
   onBehalfOfChatId?: number;
+  /** Только для админов: слот занимается под уборку. */
+  isCleaning?: boolean;
 }
