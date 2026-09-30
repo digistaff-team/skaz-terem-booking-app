@@ -172,7 +172,7 @@ const BookingFlow = () => {
         isCleaning: formData.isCleaning,
       });
 
-      toast.success("Помещение успешно забронировано!\nКод от ключницы — в карточке брони.");
+      toast.success("Помещение успешно забронировано!");
       navigate("/account");
     } catch (err) {
       toast.error("Ошибка при бронировании: " + getErrorMessage(err));
