@@ -140,6 +140,23 @@ const Index = () => {
             </DialogContent>
           </Dialog>
         </section>
+
+        {/* Emergency section */}
+        <section className="mt-12 rounded-xl border border-border bg-card p-6">
+          <h3 className="mb-3 text-lg font-semibold text-foreground">🚨 Экстренные ситуации</h3>
+          <ul className="space-y-2 text-sm text-muted-foreground">
+            <li>🚨 Единый номер экстренных служб — <strong className="text-foreground">112</strong> (пожар, скорая, полиция)</li>
+            <li>🔥 При запахе газа — <strong className="text-foreground">104</strong>: не включать свет и огонь, звонить с улицы</li>
+            <li>⚡ Обрыв провода — <strong className="text-foreground">8 (800) 220-0-220</strong>, к проводу не подходить</li>
+            <li>🆘 При любой нештатной ситуации — сначала безопасность людей, затем куратор и чат Терема</li>
+          </ul>
+          <Link
+            to="/emergency"
+            className="mt-4 inline-block text-sm font-medium text-primary hover:underline"
+          >
+            Правила поведения в экстренных ситуациях →
+          </Link>
+        </section>
       </main>
 
     </div>
