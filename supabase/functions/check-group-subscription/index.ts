@@ -101,15 +101,20 @@ async function isGroupMember(chatId: number): Promise<boolean> {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
-  if (req.method !== "POST") return json({ subscribed: false, error: "METHOD" }, 405);
+  if (req.method !== "POST") return json({ subscribed: false }, 405);
   if (!BOT_TOKEN) return json({ subscribed: false, error: "NOT_CONFIGURED" }, 503);
 
   let payload: { init_data?: string; subscriber_id?: string };
   try {
     payload = await req.json();
   } catch {
-    return json({ subscribed: false, error: "BAD_REQUEST" }, 400);
+    return json({ subscribed: false }, 400);
   }
+
+  console.log("check-group-subscription received", {
+    hasInitData: !!payload.init_data,
+    subscriberId: payload.subscriber_id,
+  });
 
   // Подписанная initData надёжнее, но невалидная (например, протухшая) не должна
   // блокировать проверку — тогда откатываемся на subscriber_id.
@@ -117,7 +122,17 @@ Deno.serve(async (req) => {
   if (chatId === null && payload.subscriber_id) {
     chatId = await chatIdFromSubscriber(payload.subscriber_id);
   }
-  if (chatId === null) return json({ subscribed: false, error: "AUTH_INVALID" }, 401);
 
-  return json({ subscribed: await isGroupMember(chatId) });
+  console.log("resolved chatId", { chatId });
+
+  if (chatId === null) {
+    // Не удалось извлечь chat_id — не блокируем, возвращаем subscribed: false
+    // (статус "error" на клиенте из-за отсутствия пользователя)
+    return json({ subscribed: false });
+  }
+
+  const subscribed = await isGroupMember(chatId);
+  console.log("isGroupMember result", { chatId, subscribed });
+
+  return json({ subscribed });
 });
