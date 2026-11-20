@@ -4,10 +4,19 @@ import { toast } from "sonner";
 import { Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getActiveBookingsForRoomDate } from "@/lib/bookingStore";
+import { getActiveBookingsForRoomDate, getSchoolSlotForDate } from "@/lib/bookingStore";
 import { toLocalISODate, formatDateLong } from "@/lib/dates";
 import { TIME_SLOTS, isStartBlocked, getAvailableEndSlots } from "@/lib/timeSlots";
 import { isIOS } from "./constants";
+
+const SCHOOL_BLOCKED_ROOM_ID = "floor-1-34";
+const SCHOOL_BLOCKED_MESSAGE =
+  "В часы работы Школы бронирование 1-го этажа недоступно";
+
+/** Начало слота попадает в часы школы → блокируем выбор. */
+function schoolBlocksStart(school: { start: string; end: string } | null, t: string): boolean {
+  return !!school && t >= school.start && t < school.end;
+}
 
 interface TimeStepProps {
   date: string;
@@ -31,6 +40,19 @@ export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialSt
 
   const availableEndSlots = startTime ? getAvailableEndSlots(existingBookings, startTime) : [];
 
+  // Фактические часы школы на эту дату: берём из броней «Школа», которые
+  // getActiveBookingsForRoomDate подтягивает для 1-го этажа. Во время каникул
+  // такой брони нет — блокировка не действует.
+  const schoolSlot = roomId === SCHOOL_BLOCKED_ROOM_ID
+    ? (() => {
+        const b = existingBookings.find((x) => x.title === "Школа");
+        return b ? { start: b.startTime, end: b.endTime } : null;
+      })()
+    : null;
+  /** Начало или пересечение окончания со школой → недоступно. */
+  const blockedBySchool = (start: string, end: string) =>
+    !!schoolSlot && start < schoolSlot.end && end > schoolSlot.start;
+
   return (
     <div>
       <h2 className="mb-1 text-2xl font-bold text-foreground">
@@ -49,10 +71,13 @@ export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialSt
               const today = toLocalISODate();
               const isToday = date === today;
               const currentHour = new Date().getHours();
+              const school = roomId === SCHOOL_BLOCKED_ROOM_ID
+                ? getSchoolSlotForDate(date)
+                : null;
               const visibleSlots = (isToday && !isAdmin
                 ? TIME_SLOTS.filter((t) => parseInt(t) > currentHour)
                 : TIME_SLOTS
-              ).filter((t) => !isStartBlocked(existingBookings, t));
+              ).filter((t) => !isStartBlocked(existingBookings, t) && !schoolBlocksStart(school, t));
 
               if (visibleSlots.length === 0) {
                 return (
@@ -85,7 +110,9 @@ export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialSt
                 const val = e.target.value;
                 setCustomStart(val);
                 if (!isIOS && val && val.split(":")[1] !== "00") {
-                  if (isStartBlocked(existingBookings, val)) {
+                  if (schoolBlocksStart(schoolSlot, val)) {
+                    toast.error(SCHOOL_BLOCKED_MESSAGE);
+                  } else if (isStartBlocked(existingBookings, val)) {
                     toast.error("Это время уже занято");
                   } else {
                     setStartTime(val);
@@ -94,7 +121,10 @@ export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialSt
               }}
               onBlur={() => {
                 if (!isIOS || !customStart) return;
-                if (isStartBlocked(existingBookings, customStart)) {
+                if (schoolBlocksStart(schoolSlot, customStart)) {
+                  toast.error(SCHOOL_BLOCKED_MESSAGE);
+                  setCustomStart("");
+                } else if (isStartBlocked(existingBookings, customStart)) {
                   toast.error("Это время уже занято");
                   setCustomStart("");
                 } else {
@@ -115,7 +145,13 @@ export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialSt
             {availableEndSlots.map((t) => (
               <button
                 key={t}
-                onClick={() => onSelect(startTime, t)}
+                onClick={() => {
+                  if (blockedBySchool(startTime, t)) {
+                    toast.error(SCHOOL_BLOCKED_MESSAGE);
+                    return;
+                  }
+                  onSelect(startTime, t);
+                }}
                 className="rounded-lg border border-border bg-card px-3 py-3 text-center font-medium text-foreground transition-all hover:border-primary/50 hover:bg-primary/5"
               >
                 {t}
@@ -141,6 +177,10 @@ export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialSt
                     toast.error("Время окончания должно быть позже начала");
                     return;
                   }
+                  if (blockedBySchool(startTime, val)) {
+                    toast.error(SCHOOL_BLOCKED_MESSAGE);
+                    return;
+                  }
                   if (existingBookings.some((b) => b.startTime < val && b.endTime > startTime)) {
                     toast.error("Это время уже занято");
                     return;
@@ -152,6 +192,11 @@ export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialSt
                 if (!isIOS || !customEnd) return;
                 if (customEnd <= startTime) {
                   toast.error("Время окончания должно быть позже начала");
+                  setCustomEnd("");
+                  return;
+                }
+                if (blockedBySchool(startTime, customEnd)) {
+                  toast.error(SCHOOL_BLOCKED_MESSAGE);
                   setCustomEnd("");
                   return;
                 }

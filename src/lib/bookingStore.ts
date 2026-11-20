@@ -62,6 +62,12 @@ function conflictsWithSchoolHours(
   return startTime < slot.end && endTime > slot.start;
 }
 
+/** Расписание «Школы» по дате: слот уроков, если день недели входит в
+ * расписание. Иначе null. Используется UI для блокировки 34 м². */
+export function getSchoolSlotForDate(date: string): { start: string; end: string } | null {
+  return SCHOOL_HOURS_BY_ISODOW[isoDayOfWeek(date)] ?? null;
+}
+
 export async function getBookings(userId?: string): Promise<Booking[]> {
   let query = supabase
     .from("bookings")
