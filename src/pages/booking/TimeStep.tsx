@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getActiveBookingsForRoomDate, getSchoolSlotForDate } from "@/lib/bookingStore";
+import { getActiveBookingsForRoomDate } from "@/lib/bookingStore";
 import { toLocalISODate, formatDateLong } from "@/lib/dates";
 import { TIME_SLOTS, isStartBlocked, getAvailableEndSlots } from "@/lib/timeSlots";
 import { isIOS } from "./constants";
@@ -106,10 +106,16 @@ export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialSt
               onChange={(e) => {
                 const val = e.target.value;
                 setCustomStart(val);
-                if (!isIOS && val && val.split(":")[1] !== "00") {
-                  if (schoolBlocksStart(schoolSlot, val)) {
-                    toast.error(SCHOOL_BLOCKED_MESSAGE);
-                  } else if (isStartBlocked(existingBookings, val)) {
+                if (!val) return;
+                // Проверка школы — для любого времени (включая круглые часы).
+                if (schoolBlocksStart(schoolSlot, val)) {
+                  toast.error(SCHOOL_BLOCKED_MESSAGE);
+                  return;
+                }
+                // Остальные проверки — только для некруглого времени
+                // (круглые часы уже отфильтрованы в сетке кнопок).
+                if (!isIOS && val.split(":")[1] !== "00") {
+                  if (isStartBlocked(existingBookings, val)) {
                     toast.error("Это время уже занято");
                   } else {
                     setStartTime(val);
@@ -117,11 +123,14 @@ export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialSt
                 }
               }}
               onBlur={() => {
-                if (!isIOS || !customStart) return;
+                if (!customStart) return;
                 if (schoolBlocksStart(schoolSlot, customStart)) {
                   toast.error(SCHOOL_BLOCKED_MESSAGE);
                   setCustomStart("");
-                } else if (isStartBlocked(existingBookings, customStart)) {
+                  return;
+                }
+                if (!isIOS || customStart.split(":")[1] === "00") return;
+                if (isStartBlocked(existingBookings, customStart)) {
                   toast.error("Это время уже занято");
                   setCustomStart("");
                 } else {
