@@ -8,6 +8,7 @@ const RPC_ERROR_MESSAGES: Record<string, string> = {
   BOOKING_NOT_FOUND: "Бронирование не найдено или принадлежит другому пользователю",
   ADMIN_ONLY: "Эта операция доступна только администратору",
   USER_NOT_FOUND: "Пользователь не найден — он должен хотя бы раз открыть приложение",
+  SCHOOL_HOURS_BLOCKED: "Это время занято занятиями «Школы» — помещение недоступно для бронирования в часы уроков",
 };
 
 export function translateRpcError(message: string): string {

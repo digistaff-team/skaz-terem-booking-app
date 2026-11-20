@@ -18,6 +18,50 @@ function getConflictingRoomIds(roomId: string): string[] {
   return [roomId, WHOLE_HOUSE_ID];
 }
 
+// Расписание занятий «Школы» (занимает комнату 11 м²) — часы, в которые
+// помещение «1-й этаж, 34 м²» недоступно для бронирования остальными резидентами.
+// Полное совпадение с проверкой в create_booking (supabase-migrations-10).
+// Ключ — день недели по ISO: 1=Пн … 7=Вс.
+const SCHOOL_HOURS_BY_ISODOW: Record<number, { start: string; end: string }> = {
+  1: { start: "08:30", end: "16:00" }, // Пн
+  2: { start: "08:30", end: "14:30" }, // Вт
+  4: { start: "08:30", end: "14:30" }, // Чт
+  5: { start: "08:30", end: "14:00" }, // Пт
+};
+const SCHOOL_ROOM_ID = "floor-2-room-11";
+const SCHOOL_BLOCKED_ROOM_ID = "floor-1-34";
+
+/** ISO-день недели даты 'YYYY-MM-DD' (1=Пн … 7=Вс). Полуденный полдень —
+ * чтобы часовой пояс не сдвигал дату. */
+function isoDayOfWeek(date: string): number {
+  const [y, m, d] = date.split("-").map(Number);
+  const dow = new Date(y, m - 1, d, 12, 0, 0).getDay(); // 0=Вс … 6=Сб
+  return dow === 0 ? 7 : dow;
+}
+
+/** Есть ли в списке броней активная бронь «Школа» на эту дату. */
+function hasSchoolBooking(bookings: Booking[], date: string): boolean {
+  return bookings.some(
+    (b) => b.roomId === SCHOOL_ROOM_ID && b.title === "Школа" && b.date === date
+  );
+}
+
+/** Бронируется ли 34 м² вразрез с расписанием «Школы» при наличии самой брони
+ * «Школа» на эту дату (для админов сервер делает исключение — см. миграцию 10). */
+function conflictsWithSchoolHours(
+  roomId: string,
+  date: string,
+  startTime: string,
+  endTime: string,
+  bookings: Booking[]
+): boolean {
+  if (roomId !== SCHOOL_BLOCKED_ROOM_ID) return false;
+  const slot = SCHOOL_HOURS_BY_ISODOW[isoDayOfWeek(date)];
+  if (!slot) return false;
+  if (!hasSchoolBooking(bookings, date)) return false;
+  return startTime < slot.end && endTime > slot.start;
+}
+
 export async function getBookings(userId?: string): Promise<Booking[]> {
   let query = supabase
     .from("bookings")
@@ -262,7 +306,26 @@ export async function getConflictingBookings(
     return [];
   }
 
-  return (data ?? []).map(mapRow);
+  const conflicts = (data ?? []).map(mapRow);
+
+  // Бронь «Школа» (на комнате 11 м²) делает недоступной бронь 34 м² в часы уроков.
+  // Находим саму бронь школы (она не входит в conflicts, т.к. это другое помещение)
+  // и при пересечении добавляем её в список — UI покажет слот занятым.
+  if (roomId === SCHOOL_BLOCKED_ROOM_ID) {
+    const schoolQuery = await supabase
+      .from("bookings")
+      .select("id, room_id, room_name, date, start_time, end_time, title, description, user_name, status")
+      .eq("room_id", SCHOOL_ROOM_ID)
+      .eq("date", date)
+      .eq("status", "active");
+    const schoolBookings = (schoolQuery.data ?? []).map(mapRow);
+    if (conflictsWithSchoolHours(roomId, date, startTime, endTime, schoolBookings)) {
+      const school = schoolBookings.find((b) => b.title === "Школа");
+      if (school) conflicts.push(school);
+    }
+  }
+
+  return conflicts;
 }
 
 // Строка таблицы bookings в Supabase (snake_case).
