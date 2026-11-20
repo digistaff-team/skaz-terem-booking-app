@@ -71,13 +71,10 @@ export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialSt
               const today = toLocalISODate();
               const isToday = date === today;
               const currentHour = new Date().getHours();
-              const school = roomId === SCHOOL_BLOCKED_ROOM_ID
-                ? getSchoolSlotForDate(date)
-                : null;
               const visibleSlots = (isToday && !isAdmin
                 ? TIME_SLOTS.filter((t) => parseInt(t) > currentHour)
                 : TIME_SLOTS
-              ).filter((t) => !isStartBlocked(existingBookings, t) && !schoolBlocksStart(school, t));
+              ).filter((t) => !isStartBlocked(existingBookings, t) && !schoolBlocksStart(schoolSlot, t));
 
               if (visibleSlots.length === 0) {
                 return (
