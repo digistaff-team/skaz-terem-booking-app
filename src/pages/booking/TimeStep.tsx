@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getActiveBookingsForRoomDate } from "@/lib/bookingStore";
+import { getActiveBookingsForRoomDate, getSchoolSlotForDate } from "@/lib/bookingStore";
 import { toLocalISODate, formatDateLong } from "@/lib/dates";
 import { TIME_SLOTS, isStartBlocked, getAvailableEndSlots } from "@/lib/timeSlots";
 import { isIOS } from "./constants";
@@ -12,6 +12,12 @@ import { isIOS } from "./constants";
 const SCHOOL_BLOCKED_ROOM_ID = "floor-1-34";
 const SCHOOL_BLOCKED_MESSAGE =
   "В часы работы Школы бронирование 1-го этажа недоступно";
+
+// Помещения 2-го этажа, где во время уроков Школы показываем мягкое
+// предупреждение (бронь не блокируем).
+const SCHOOL_WARNING_ROOM_IDS = ["floor-2-hall-20", "floor-2-office-6"];
+const SCHOOL_WARNING_MESSAGE =
+  "В часы работы Школы просим не мешать ведению занятий🙏🏻";
 
 /** Начало слота попадает в часы школы → блокируем выбор. */
 function schoolBlocksStart(school: { start: string; end: string } | null, t: string): boolean {
@@ -52,6 +58,19 @@ export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialSt
   /** Начало или пересечение окончания со школой → недоступно. */
   const blockedBySchool = (start: string, end: string) =>
     !!schoolSlot && start < schoolSlot.end && end > schoolSlot.start;
+
+  // Часы работы Школы по расписанию — для помещений 2-го этажа показываем
+  // мягкое предупреждение (не блокируем бронь), если время накладывается.
+  const schoolWarningSlot = SCHOOL_WARNING_ROOM_IDS.includes(roomId)
+    ? getSchoolSlotForDate(date)
+    : null;
+  const overlapsSchoolWarning = (start: string, end: string) =>
+    !!schoolWarningSlot && start < schoolWarningSlot.end && end > schoolWarningSlot.start;
+  const warnIfOverlapsSchool = (start: string, end: string) => {
+    if (overlapsSchoolWarning(start, end)) {
+      toast.success(SCHOOL_WARNING_MESSAGE);
+    }
+  };
 
   return (
     <div>
@@ -191,6 +210,7 @@ export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialSt
                     toast.error("Это время уже занято");
                     return;
                   }
+                  warnIfOverlapsSchool(startTime, val);
                   onSelect(startTime, val);
                 }
               }}
@@ -211,6 +231,7 @@ export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialSt
                   setCustomEnd("");
                   return;
                 }
+                warnIfOverlapsSchool(startTime, customEnd);
                 onSelect(startTime, customEnd);
               }}
               className="mt-2"
