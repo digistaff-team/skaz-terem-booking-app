@@ -225,7 +225,25 @@ export async function getActiveBookingsForRoomDate(
     .eq("status", "active");
 
   if (error) return [];
-  return (data ?? []).map(mapRow);
+
+  const results = (data ?? []).map(mapRow);
+
+  // Для помещения 34 м² подтягиваем также брони «Школа» с 11 м²,
+  // чтобы UI показывал часы школы как занятые.
+  if (roomId === "floor-1-34") {
+    const { data: schoolData, error: schoolError } = await supabase
+      .from("bookings")
+      .select("id, room_id, room_name, date, start_time, end_time, title, description, user_name, status")
+      .eq("room_id", "floor-2-room-11")
+      .eq("date", date)
+      .eq("title", "Школа")
+      .eq("status", "active");
+    if (!schoolError && schoolData) {
+      results.push(...(schoolData as any[]).map(mapRow));
+    }
+  }
+
+  return results;
 }
 
 /** Активные брони календарного месяца (month = 'YYYY-MM') — для расчёта
