@@ -66,11 +66,16 @@ export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialSt
     : null;
   const overlapsSchoolWarning = (start: string, end: string) =>
     !!schoolWarningSlot && start < schoolWarningSlot.end && end > schoolWarningSlot.start;
-  const warnIfOverlapsSchool = (start: string, end: string) => {
-    if (overlapsSchoolWarning(start, end)) {
-      toast.success(SCHOOL_WARNING_MESSAGE);
-    }
-  };
+
+  // Зелёный баннер-предупреждение: показываем, когда выбранный интервал
+  // пересекается с часами Школы. Пока окончание не выбрано, считаем концом
+  // конец дня — если начало уже попало в часы школы, пересечение гарантировано
+  // при любом окончании позже начала.
+  const schoolWarningVisible = (() => {
+    if (!schoolWarningSlot || !startTime) return false;
+    const end = customEnd && customEnd > startTime ? customEnd : "23:59";
+    return overlapsSchoolWarning(startTime, end);
+  })();
 
   return (
     <div>
@@ -80,6 +85,15 @@ export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialSt
       </h2>
       <p className="mb-2 text-lg font-semibold text-primary">{roomIcon} {roomName}</p>
       <p className="mb-6 text-muted-foreground">{formatDateLong(date)}</p>
+
+      {schoolWarningVisible && (
+        <div
+          role="status"
+          className="mb-4 rounded-lg bg-green-600 px-4 py-3 text-sm font-medium text-white"
+        >
+          {SCHOOL_WARNING_MESSAGE}
+        </div>
+      )}
 
       {isLoadingBookings ? (
         <p className="text-sm text-muted-foreground animate-pulse">⏳ Загружаю расписание...</p>
@@ -210,7 +224,6 @@ export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialSt
                     toast.error("Это время уже занято");
                     return;
                   }
-                  warnIfOverlapsSchool(startTime, val);
                   onSelect(startTime, val);
                 }
               }}
@@ -231,7 +244,6 @@ export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialSt
                   setCustomEnd("");
                   return;
                 }
-                warnIfOverlapsSchool(startTime, customEnd);
                 onSelect(startTime, customEnd);
               }}
               className="mt-2"
