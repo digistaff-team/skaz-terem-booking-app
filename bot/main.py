@@ -35,7 +35,7 @@ BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://aveitrccxqbjfxysogiv.supabase.co")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")  # Service role key для записи
 GROUP_ID = "-1003507317011"
-APP_URL = os.getenv("APP_URL", "https://skaz-terem-booking.vercel.app")
+APP_URL = os.getenv("APP_URL", "https://skaz-terem.vercel.app")
 # Пригласительная ссылка на закрытую группу (задайте в .env) —
 # в приватной группе её нужно сгенерировать заранее, обычной ссылки-username нет
 GROUP_INVITE_URL = os.getenv("GROUP_INVITE_URL", "")
