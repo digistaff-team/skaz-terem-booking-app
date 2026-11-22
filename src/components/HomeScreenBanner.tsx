@@ -74,13 +74,13 @@ const HomeScreenBanner = () => {
   return (
     <div className="mx-auto mb-6 flex max-w-5xl items-start gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3">
       <div className="flex-1 text-sm">
-        <p className="font-medium text-foreground">Добавьте Сказочный Терем на главный экран</p>
-        <p className="text-muted-foreground">Приложение всегда будет под рукой — в один тап.</p>
+        <p className="font-medium text-foreground">Добавьте на главный экран</p>
+        <p className="text-muted-foreground">Приложение будет под рукой</p>
         <button
           onClick={handleAddToHomeScreen}
           className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
         >
-          Добавить иконку →
+          Добавить иконку на экран →
         </button>
       </div>
       <button
