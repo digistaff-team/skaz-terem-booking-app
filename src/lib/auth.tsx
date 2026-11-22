@@ -17,6 +17,10 @@ declare global {
           };
         };
         colorScheme: "light" | "dark";
+        addToHomeScreen?: () => void;
+        checkHomeScreenStatus?: (callback: (result: { status: string }) => void) => void;
+        onEvent?: (eventType: string, callback: (eventData?: { status?: string }) => void) => void;
+        offEvent?: (eventType: string, callback: (eventData?: { status?: string }) => void) => void;
       };
     };
   }

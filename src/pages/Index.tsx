@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
+import HomeScreenBanner from "@/components/HomeScreenBanner";
 
 
 const Index = () => {
@@ -58,6 +59,9 @@ const Index = () => {
 
 
       <main className="mx-auto max-w-5xl px-4 py-10">
+        {/* Banner: добавить иконку на главный экран */}
+        <HomeScreenBanner />
+
         {/* Welcome */}
         <div className="mb-10 text-center">
           <h2 className="mb-3 text-3xl font-bold text-foreground sm:text-4xl">
