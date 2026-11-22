@@ -21,20 +21,39 @@ const HomeScreenBanner = () => {
     webApp.onEvent?.("home_screen_failed", handleFailed);
 
     // Разово проверяем статус иконки на главном экране (Bot API 8.0+)
+    const canAdd = typeof webApp.addToHomeScreen === "function";
+    let responded = false;
+    const fallbackTimer = window.setTimeout(() => {
+      // Клиент не ответил на запрос статуса — трактуем как unknown и показываем баннер
+      if (!responded && canAdd) setVisible(true);
+    }, 1500);
+
     if (typeof webApp.checkHomeScreenStatus === "function") {
       try {
         webApp.checkHomeScreenStatus((result) => {
-          const status = result?.status as HomeScreenStatus;
+          responded = true;
+          window.clearTimeout(fallbackTimer);
+          // SDK передаёт либо строку статуса, либо объект { status }
+          const status: HomeScreenStatus =
+            typeof result === "string" ? (result as HomeScreenStatus) : ((result?.status as HomeScreenStatus) ?? "unknown");
+          console.info("[HomeScreenBanner] status:", status);
           if (status === "missed" || status === "unknown") {
             setVisible(true);
           }
         });
-      } catch {
-        // checkHomeScreenStatus может не поддерживаться — тихо игнорируем
+      } catch (error) {
+        // checkHomeScreenStatus не поддерживается этой версией клиента
+        responded = true;
+        window.clearTimeout(fallbackTimer);
+        console.info("[HomeScreenBanner] checkHomeScreenStatus unavailable", error);
       }
+    } else {
+      // Метода проверки нет, но добавить иконку можно — показываем баннер через fallback-таймер
+      console.info("[HomeScreenBanner] checkHomeScreenStatus missing, addToHomeScreen:", canAdd);
     }
 
     return () => {
+      window.clearTimeout(fallbackTimer);
       webApp.offEvent?.("home_screen_added", handleAdded);
       webApp.offEvent?.("home_screen_failed", handleFailed);
     };
