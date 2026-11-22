@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { PlusCircle, X } from "lucide-react";
+import { X } from "lucide-react";
 import { toast } from "sonner";
 
 type HomeScreenStatus = "unsupported" | "added" | "missed" | "unknown";
@@ -73,7 +73,6 @@ const HomeScreenBanner = () => {
 
   return (
     <div className="mx-auto mb-6 flex max-w-5xl items-start gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3">
-      <PlusCircle className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
       <div className="flex-1 text-sm">
         <p className="font-medium text-foreground">Добавьте Сказочный Терем на главный экран</p>
         <p className="text-muted-foreground">Приложение всегда будет под рукой — в один тап.</p>
