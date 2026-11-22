@@ -122,6 +122,10 @@ The Supabase client in `src/integrations/supabase/client.ts` uses a hardcoded an
 
 `public/telegram-web-app.js` is a locally hosted copy of the Telegram SDK (avoids CDN loading failures). Loaded first in `index.html`. `src/main.tsx` calls `WebApp.ready()` and `WebApp.expand()` before React renders.
 
+**URLs:**
+- **Deploy (Vercel):** `https://skaz-terem.vercel.app` — set in BotFather's Mini App config and in `APP_URL` (`bot/main.py`, `bot/.env.example`). The old `skaz-terem-booking.vercel.app` returns 404 `DEPLOYMENT_NOT_FOUND` (project was renamed).
+- **Direct Mini App link:** `https://t.me/SkazTerem_bot/booking` — `booking` is the Mini App short name registered in BotFather. Use this in messages/instructions; the home-screen shortcut created via `WebApp.addToHomeScreen()` (see `src/components/HomeScreenBanner.tsx`) opens the app through it.
+
 **The production bot @SkazTerem_bot runs on the ProTalk service**, not on `bot/main.py` — that Python script is a reference/local fallback only. Never run it with the production bot token while ProTalk is active (Telegram allows one update consumer per token → 409 Conflict). ProTalk handles the /start flow (group membership check + app link); everything else (auth, booking, balances) is app ↔ Supabase directly.
 
 ### Styling
