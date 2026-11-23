@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { useGroupSubscription } from "@/lib/groupSubscription";
 import BookingBlockedOverlay from "@/components/BookingBlockedOverlay";
+import { readStartIntent, stashPendingIntent } from "@/lib/startParam";
 import Index from "./pages/Index.tsx";
 
 // Главная грузится сразу, остальные страницы — отдельными чанками по требованию
@@ -18,7 +19,24 @@ const Admin = lazy(() => import("./pages/Admin.tsx"));
 const AdminStats = lazy(() => import("./pages/AdminStats.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      retry: 2,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+/** Сохраняет deep-link intent (startapp) до завершения аутентификации. */
+function StartParamBridge() {
+  useEffect(() => {
+    const intent = readStartIntent();
+    if (intent) stashPendingIntent(intent);
+  }, []);
+  return null;
+}
 
 const PageLoader = () => (
   <div className="min-h-screen warm-glow flex items-center justify-center">
@@ -121,6 +139,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <StartParamBridge />
           <SubscriptionGuard>
             <AppRoutes />
           </SubscriptionGuard>
