@@ -9,6 +9,7 @@ import { getErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DeepLinkGenerator } from "@/components/DeepLinkGenerator";
 import { toast } from "sonner";
 import { ArrowLeft, CircleDollarSign } from "lucide-react";
 
@@ -174,6 +175,8 @@ const Admin = () => {
             </Button>
           </form>
         )}
+
+        <DeepLinkGenerator />
       </div>
     </div>
   );
