@@ -55,7 +55,7 @@ export const rooms: Room[] = [
     icon: "☀️",
     shortLabel: "Средняя комната",
     unavailableUntil: "2027-05-31",
-    unavailableReason: "Занято под класс Школы до 31.05.2027",
+    unavailableReason: "Занято под класс Школы",
   },
   {
     id: "floor-2-office-6",
