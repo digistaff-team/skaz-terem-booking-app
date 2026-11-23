@@ -1,25 +1,43 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getBookingsForDate } from "@/lib/bookingStore";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import { ChevronLeft, CalendarDays } from "lucide-react";
 import { ru } from "date-fns/locale";
 import { format, addDays } from "date-fns";
 import { toLocalISODate as toISODate, currentTimeHHMM } from "@/lib/dates";
 import { parseEventTitle } from "@/lib/booking";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { onLifecycleEvent } from "@/lib/telegram";
 
 const Schedule = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<string>(toISODate(new Date()));
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const online = useOnlineStatus();
 
   const { data: rawBookings = [], isLoading } = useQuery({
     queryKey: ["schedule", selectedDate],
     queryFn: () => getBookingsForDate(selectedDate),
   });
+
+  // Возврат из свёрнутого Mini App → обновляем расписание (Telegram fallback: visibilitychange)
+  useEffect(() => {
+    const refresh = () => {
+      if (navigator.onLine) queryClient.invalidateQueries({ queryKey: ["schedule"] });
+    };
+    const unsub = onLifecycleEvent("activated", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      unsub();
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [queryClient]);
 
   const today = toISODate(new Date());
   const currentTime = currentTimeHHMM();
@@ -29,6 +47,7 @@ const Schedule = () => {
 
   return (
     <div className="min-h-screen warm-glow">
+      {!online && <OfflineBanner />}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="mx-auto flex max-w-2xl items-center gap-3 px-4 py-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/")}>

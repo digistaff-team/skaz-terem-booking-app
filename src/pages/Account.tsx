@@ -5,13 +5,17 @@ import BookingsList from "@/components/BookingsList";
 import PersonalLimit from "@/components/PersonalLimit";
 import MonthlyLimits from "@/components/MonthlyLimits";
 import MyMonthlyStats from "@/components/MyMonthlyStats";
+import { OfflineBanner } from "@/components/OfflineBanner";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { ArrowLeft, CircleDollarSign, BarChart3, ClipboardList } from "lucide-react";
 
 const Account = () => {
   const { user } = useAuth();
+  const online = useOnlineStatus();
 
   return (
     <div className="min-h-screen warm-glow">
+      {!online && <OfflineBanner />}
       <div className="mx-auto max-w-2xl px-4 py-8">
         <Link to="/" className="mb-6 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-4 w-4" /> На главную
