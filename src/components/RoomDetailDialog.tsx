@@ -2,6 +2,7 @@ import { Room } from "@/types/booking";
 import { roomImages } from "@/data/roomImages";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { isRoomUnavailable } from "@/lib/roomAvailability";
 import { X } from "lucide-react";
 import {
   Dialog,
@@ -20,6 +21,7 @@ interface RoomDetailDialogProps {
 
 const RoomDetailDialog = ({ room, open, onClose, onBook }: RoomDetailDialogProps) => {
   const image = roomImages[room.id];
+  const unavailable = isRoomUnavailable(room);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -86,9 +88,18 @@ const RoomDetailDialog = ({ room, open, onClose, onBook }: RoomDetailDialogProps
             </p>
           )}
 
-          <Button className="mt-6 w-full" size="lg" onClick={onBook}>
-            Забронировать
-          </Button>
+          {unavailable ? (
+            <div className="mt-6 w-full">
+              <p className="rounded-lg bg-muted px-4 py-3 text-center text-sm font-medium text-muted-foreground">
+                ⛔ Недоступно для бронирования
+                {room.unavailableReason ? ` — ${room.unavailableReason}` : ""}
+              </p>
+            </div>
+          ) : (
+            <Button className="mt-6 w-full" size="lg" onClick={onBook}>
+              Забронировать
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

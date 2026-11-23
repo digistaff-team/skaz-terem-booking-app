@@ -51,6 +51,8 @@ export const rooms: Room[] = [
     noFood: true,
     calendarId: "6e045dbd542076785a479a1675b03dfafa61d3818d332db8a86dab376f87ce3e@group.calendar.google.com",
     icon: "☀️",
+    unavailableUntil: "2027-05-31",
+    unavailableReason: "Занято под класс Школы до 31.05.2027",
   },
   {
     id: "floor-2-office-6",

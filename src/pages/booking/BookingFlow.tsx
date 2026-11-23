@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { ArrowLeft, CalendarDays, Clock, Home, Check, Zap } from "lucide-react";
 import { useAuth, getUserName } from "@/lib/auth";
 import { getMaxBookingDate, getMaxDateErrorMessage } from "@/config/bookingLimits";
+import { isRoomUnavailable } from "@/lib/roomAvailability";
 import { getErrorMessage } from "@/lib/utils";
 import { toLocalISODate, localISODateInDays, currentTimeHHMM, formatDateLong } from "@/lib/dates";
 import { STEP_ORDER, isIOS, type Step } from "./constants";
@@ -126,7 +127,7 @@ const BookingFlow = () => {
     const roomId = searchParams.get("room");
     if (roomId) {
       const room = rooms.find((r) => r.id === roomId);
-      if (room) {
+      if (room && !isRoomUnavailable(room)) {
         setSelectedRoom(room);
         setFormData((p) => ({ ...p, roomId: room.id }));
         setStep("date");
@@ -143,7 +144,7 @@ const BookingFlow = () => {
     const intent = takePendingIntent() ?? readStartIntent();
     if (!intent) return;
     const room = rooms.find((r) => r.id === intent.roomId);
-    if (!room) return;
+    if (!room || isRoomUnavailable(room)) return;
     setSelectedRoom(room);
     if (intent.date) {
       setFormData((p) => ({ ...p, roomId: room.id, date: intent.date! }));
@@ -294,20 +295,33 @@ const BookingFlow = () => {
             <h2 className="mb-1 text-2xl font-bold text-foreground">Выберите помещение</h2>
             <p className="mb-6 text-muted-foreground">Какое пространство вам подходит?</p>
             <div className="space-y-3">
-              {rooms.map((room) => (
-                <button
-                  key={room.id}
-                  onClick={() => handleRoomSelect(room)}
-                  className="w-full flex items-center gap-4 rounded-xl border border-border bg-card p-4 text-left transition-all hover:shadow-md hover:border-primary/30"
-                >
-                  <span className="text-2xl">{room.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-foreground">{room.name}</p>
-                    <p className="text-sm text-muted-foreground truncate">{room.description}</p>
-                  </div>
-                  <span className="text-xs text-muted-foreground shrink-0">{room.area} м²</span>
-                </button>
-              ))}
+              {rooms.map((room) => {
+                const unavailable = isRoomUnavailable(room);
+                return (
+                  <button
+                    key={room.id}
+                    disabled={unavailable}
+                    onClick={() => handleRoomSelect(room)}
+                    title={unavailable ? room.unavailableReason : undefined}
+                    className={
+                      unavailable
+                        ? "w-full flex items-center gap-4 rounded-xl border border-border bg-muted/40 p-4 text-left opacity-60 cursor-not-allowed"
+                        : "w-full flex items-center gap-4 rounded-xl border border-border bg-card p-4 text-left transition-all hover:shadow-md hover:border-primary/30"
+                    }
+                  >
+                    <span className="text-2xl">{room.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-foreground">{room.name}</p>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {unavailable && room.unavailableReason
+                          ? `⛔ ${room.unavailableReason}`
+                          : room.description}
+                      </p>
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0">{room.area} м²</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

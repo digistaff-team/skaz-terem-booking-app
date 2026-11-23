@@ -9,6 +9,10 @@ export interface Room {
   noFood: boolean;
   calendarId: string;
   icon: string;
+  /** ISO-дата (YYYY-MM-DD), до которой помещение недоступно для брони (включительно). */
+  unavailableUntil?: string;
+  /** Причина недоступности — показывается пользователю. */
+  unavailableReason?: string;
 }
 
 export interface Subscriber {

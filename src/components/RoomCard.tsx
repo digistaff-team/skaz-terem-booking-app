@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Room } from "@/types/booking";
 import { Badge } from "@/components/ui/badge";
 import { roomImages } from "@/data/roomImages";
+import { isRoomUnavailable } from "@/lib/roomAvailability";
 import ImageLightbox from "@/components/ImageLightbox";
 import RoomDetailDialog from "@/components/RoomDetailDialog";
 
@@ -14,6 +15,7 @@ const RoomCard = ({ room, onSelect }: RoomCardProps) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const image = roomImages[room.id];
+  const unavailable = isRoomUnavailable(room);
 
   return (
     <>
@@ -73,15 +75,21 @@ const RoomCard = ({ room, onSelect }: RoomCardProps) => {
           </div>
 
           <div className="mt-auto pt-3">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelect(room);
-              }}
-              className="text-sm font-medium text-primary hover:underline focus:outline-none"
-            >
-              Забронировать →
-            </button>
+            {unavailable ? (
+              <p className="text-sm font-medium text-muted-foreground">
+                ⛔ Недоступно{room.unavailableReason ? `: ${room.unavailableReason}` : ""}
+              </p>
+            ) : (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelect(room);
+                }}
+                className="text-sm font-medium text-primary hover:underline focus:outline-none"
+              >
+                Забронировать →
+              </button>
+            )}
           </div>
         </div>
       </div>
