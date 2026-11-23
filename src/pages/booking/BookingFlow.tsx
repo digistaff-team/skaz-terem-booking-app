@@ -315,7 +315,7 @@ const BookingFlow = () => {
                       <p className="text-sm text-muted-foreground truncate">
                         {unavailable && room.unavailableReason
                           ? `⛔ ${room.unavailableReason}`
-                          : room.description}
+                          : room.description.split('. ')[0]}
                       </p>
                     </div>
                     <span className="text-xs text-muted-foreground shrink-0">{room.area} м²</span>
