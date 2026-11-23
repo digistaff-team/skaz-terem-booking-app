@@ -1,10 +1,9 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { initWebApp, applyTheme } from "@/lib/telegram";
 
-if (window.Telegram?.WebApp) {
-  window.Telegram.WebApp.ready();
-  window.Telegram.WebApp.expand();
-}
+initWebApp();
+applyTheme();
 
 createRoot(document.getElementById("root")!).render(<App />);

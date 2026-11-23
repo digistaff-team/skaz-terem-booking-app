@@ -1,30 +1,6 @@
 import { useState, useEffect, createContext, useContext, createElement, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-
-declare global {
-  interface Window {
-    Telegram?: {
-      WebApp: {
-        ready: () => void;
-        expand: () => void;
-        initData: string;
-        initDataUnsafe: {
-          user?: {
-            id: number;
-            username?: string;
-            first_name?: string;
-            last_name?: string;
-          };
-        };
-        colorScheme: "light" | "dark";
-        addToHomeScreen?: () => void;
-        checkHomeScreenStatus?: (callback: (result: { status: string } | string) => void) => void;
-        onEvent?: (eventType: string, callback: (eventData?: { status?: string }) => void) => void;
-        offEvent?: (eventType: string, callback: (eventData?: { status?: string }) => void) => void;
-      };
-    };
-  }
-}
+import { tg } from "@/lib/telegram";
 
 const AUTH_TOKEN_KEY = "auth_token";
 const AUTH_USER_KEY = "auth_user";
@@ -44,7 +20,7 @@ export interface Subscriber {
 
 /** Подписанная строка initData — сервер проверяет её подпись при каждой мутации. */
 export function getInitData(): string | null {
-  const initData = window.Telegram?.WebApp?.initData;
+  const initData = tg()?.initData;
   return initData && initData.length > 0 ? initData : null;
 }
 

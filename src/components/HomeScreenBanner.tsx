@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { toast } from "sonner";
+import { tg, canUse, showAlert } from "@/lib/telegram";
 
 type HomeScreenStatus = "unsupported" | "added" | "missed" | "unknown";
 
@@ -8,7 +9,7 @@ const HomeScreenBanner = () => {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const webApp = window.Telegram?.WebApp;
+    const webApp = tg();
     if (!webApp) return;
 
     const handleAdded = () => {
@@ -24,31 +25,27 @@ const HomeScreenBanner = () => {
     const canAdd = typeof webApp.addToHomeScreen === "function";
     let responded = false;
     const fallbackTimer = window.setTimeout(() => {
-      // Клиент не ответил на запрос статуса — трактуем как unknown и показываем баннер
       if (!responded && canAdd) setVisible(true);
     }, 1500);
 
-    if (typeof webApp.checkHomeScreenStatus === "function") {
+    if (canUse("checkHomeScreenStatus")) {
       try {
         webApp.checkHomeScreenStatus((result) => {
           responded = true;
           window.clearTimeout(fallbackTimer);
-          // SDK передаёт либо строку статуса, либо объект { status }
           const status: HomeScreenStatus =
-            typeof result === "string" ? (result as HomeScreenStatus) : ((result?.status as HomeScreenStatus) ?? "unknown");
+            typeof result === "string" ? (result as HomeScreenStatus) : ((result as Record<string, unknown>)?.status as HomeScreenStatus) ?? "unknown";
           console.info("[HomeScreenBanner] status:", status);
           if (status === "missed" || status === "unknown") {
             setVisible(true);
           }
         });
       } catch (error) {
-        // checkHomeScreenStatus не поддерживается этой версией клиента
         responded = true;
         window.clearTimeout(fallbackTimer);
         console.info("[HomeScreenBanner] checkHomeScreenStatus unavailable", error);
       }
     } else {
-      // Метода проверки нет, но добавить иконку можно — показываем баннер через fallback-таймер
       console.info("[HomeScreenBanner] checkHomeScreenStatus missing, addToHomeScreen:", canAdd);
     }
 
@@ -60,12 +57,11 @@ const HomeScreenBanner = () => {
   }, []);
 
   const handleAddToHomeScreen = () => {
-    const addToHomeScreen = window.Telegram?.WebApp?.addToHomeScreen;
+    const addToHomeScreen = tg()?.addToHomeScreen;
     if (typeof addToHomeScreen !== "function") {
-      toast.error("Функция пока не поддерживается на этом устройстве");
+      showAlert("Функция пока не поддерживается на этом устройстве");
       return;
     }
-    // Метод только инициирует системный запрос Telegram и не возвращает результат
     addToHomeScreen();
   };
 
