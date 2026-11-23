@@ -8,6 +8,7 @@ import { getActiveBookingsForRoomDate, getSchoolSlotForDate } from "@/lib/bookin
 import { toLocalISODate, formatDateLong } from "@/lib/dates";
 import { TIME_SLOTS, isStartBlocked, getAvailableEndSlots } from "@/lib/timeSlots";
 import { isIOS } from "./constants";
+import { hapticTap, hapticWarning } from "@/lib/telegram";
 
 const SCHOOL_BLOCKED_ROOM_ID = "floor-1-34";
 const SCHOOL_BLOCKED_MESSAGE =
@@ -45,6 +46,16 @@ export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialSt
   });
 
   const availableEndSlots = startTime ? getAvailableEndSlots(existingBookings, startTime) : [];
+
+  // Однократный hapticWarning за выбор (сбрасывается при смене startTime)
+  const [schoolWarnedFor, setSchoolWarnedFor] = useState<string | null>(null);
+
+  const warnSchoolBlockOnce = (key: string) => {
+    if (schoolWarnedFor !== key) {
+      hapticWarning();
+      setSchoolWarnedFor(key);
+    }
+  };
 
   // Фактические часы школы на эту дату: берём из броней «Школа», которые
   // getActiveBookingsForRoomDate подтягивает для 1-го этажа. Во время каникул
@@ -120,7 +131,7 @@ export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialSt
               return visibleSlots.map((t) => (
                 <button
                   key={t}
-                  onClick={() => setStartTime(t)}
+                  onClick={() => { hapticTap(); setStartTime(t); }}
                   className="rounded-lg border border-border bg-card px-3 py-3 text-center font-medium text-foreground transition-all hover:border-primary/50 hover:bg-primary/5"
                 >
                   {t}
@@ -186,9 +197,11 @@ export function TimeStep({ date, roomId, roomName, roomIcon, onSelect, initialSt
                 key={t}
                 onClick={() => {
                   if (blockedBySchool(startTime, t)) {
+                    hapticWarning();
                     toast.error(SCHOOL_BLOCKED_MESSAGE);
                     return;
                   }
+                  hapticTap();
                   onSelect(startTime, t);
                 }}
                 className="rounded-lg border border-border bg-card px-3 py-3 text-center font-medium text-foreground transition-all hover:border-primary/50 hover:bg-primary/5"

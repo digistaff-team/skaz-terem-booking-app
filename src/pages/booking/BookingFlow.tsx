@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { rooms } from "@/data/rooms";
@@ -22,6 +22,18 @@ import { toLocalISODate, localISODateInDays, currentTimeHHMM, formatDateLong } f
 import { STEP_ORDER, isIOS, type Step } from "./constants";
 import { TimeStep } from "./TimeStep";
 import { DetailsStep } from "./DetailsStep";
+import { readStartIntent, takePendingIntent, stashPendingIntent } from "@/lib/startParam";
+import {
+  setVerticalSwipes,
+  setClosingConfirmation,
+  showBackButton,
+  hideBackButton,
+  onBackButton,
+  hapticSuccess,
+  hapticError,
+  hapticTap,
+  hapticWarning,
+} from "@/lib/telegram";
 
 const BookingFlow = () => {
   const navigate = useNavigate();
@@ -36,6 +48,9 @@ const BookingFlow = () => {
   const [pendingDate, setPendingDate] = useState("");
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  // Guard от двойного нажатия «Назад» (системный шеврон + кнопка мастера)
+  const backLockRef = useState<{ locked: boolean; timer?: ReturnType<typeof setTimeout> }>({ locked: false })[0];
 
   const bookMutation = useMutation({
     mutationFn: ({
@@ -55,7 +70,58 @@ const BookingFlow = () => {
     },
   });
 
-  // Проверяем, есть ли room в URL — сразу переходим к выбору даты
+  // --- BackButton: показывать на всех шагах кроме "room", клик = goBack() ---
+  const goBack = useCallback(() => {
+    if (backLockRef.locked) return;
+    backLockRef.locked = true;
+    clearTimeout(backLockRef.timer);
+    backLockRef.timer = setTimeout(() => { backLockRef.locked = false; }, 300);
+
+    const idx = STEP_ORDER.indexOf(step);
+    if (idx > 0) {
+      const prevStep = STEP_ORDER[idx - 1];
+      if (step === "time" || prevStep === "time") {
+        setFormData(p => ({ ...p, startTime: "", endTime: "" }));
+      }
+      setStep(prevStep);
+    } else {
+      navigate("/");
+    }
+  }, [step, navigate, backLockRef]);
+
+  useEffect(() => {
+    if (step !== "room") {
+      showBackButton();
+      const unsub = onBackButton(goBack);
+      return unsub;
+    }
+    hideBackButton();
+  }, [step, goBack]);
+
+  // --- VerticalSwipes: отключать на time/details/confirm ---
+  useEffect(() => {
+    const needsSwipeGuard = step === "time" || step === "details" || step === "confirm";
+    setVerticalSwipes(!needsSwipeGuard);
+    if (!needsSwipeGuard) return;
+    return () => setVerticalSwipes(true);
+  }, [step]);
+
+  // --- ClosingConfirmation: включать когда форма details заполнена или идёт мутация ---
+  const isDetailsDirty =
+    step === "details" && !!(formData.title || formData.description);
+  const isConfirming = bookMutation.isPending;
+
+  useEffect(() => {
+    setClosingConfirmation(isDetailsDirty || isConfirming);
+    return () => setClosingConfirmation(false);
+  }, [isDetailsDirty, isConfirming]);
+
+  // Отключаем confirmation при успешном завершении
+  useEffect(() => {
+    if (bookMutation.isSuccess) setClosingConfirmation(false);
+  }, [bookMutation.isSuccess]);
+
+  // Проверяем, есть ли room в URL или deep-link intent — сразу переходим к выбору даты
   useEffect(() => {
     const roomId = searchParams.get("room");
     if (roomId) {
@@ -64,9 +130,29 @@ const BookingFlow = () => {
         setSelectedRoom(room);
         setFormData((p) => ({ ...p, roomId: room.id }));
         setStep("date");
+        return;
       }
     }
-  }, []);
+    // startapp payload из Telegram (только для авторизованных; иначе Intent уже
+    // сохранён App.tsx в sessionStorage и будет применён после входа)
+    if (!user) {
+      const intent = readStartIntent();
+      if (intent) stashPendingIntent(intent);
+      return;
+    }
+    const intent = takePendingIntent() ?? readStartIntent();
+    if (!intent) return;
+    const room = rooms.find((r) => r.id === intent.roomId);
+    if (!room) return;
+    setSelectedRoom(room);
+    if (intent.date) {
+      setFormData((p) => ({ ...p, roomId: room.id, date: intent.date! }));
+      setStep("time");
+    } else {
+      setFormData((p) => ({ ...p, roomId: room.id }));
+      setStep("date");
+    }
+  }, [user]);
 
   const handleRoomSelect = (room: Room) => {
     setSelectedRoom(room);
@@ -133,8 +219,10 @@ const BookingFlow = () => {
 
   const handleTimeSelect = async (startTime: string, endTime: string) => {
     if (!selectedRoom || !formData.date) return;
+    hapticTap(); // лёгкий тап при выборе слота
     const available = await isTimeSlotAvailable(selectedRoom.id, formData.date, startTime, endTime);
     if (!available) {
+      hapticError();
       toast.error("Это время уже занято, выберите другое");
       return;
     }
@@ -172,23 +260,12 @@ const BookingFlow = () => {
         isCleaning: formData.isCleaning,
       });
 
+      hapticSuccess();
       toast.success("Помещение успешно забронировано!");
       navigate("/account");
     } catch (err) {
+      hapticError();
       toast.error("Ошибка при бронировании: " + getErrorMessage(err));
-    }
-  };
-
-  const goBack = () => {
-    const idx = STEP_ORDER.indexOf(step);
-    if (idx > 0) {
-      const prevStep = STEP_ORDER[idx - 1];
-      if (step === "time" || prevStep === "time") {
-        setFormData(p => ({ ...p, startTime: "", endTime: "" }));
-      }
-      setStep(prevStep);
-    } else {
-      navigate("/");
     }
   };
 

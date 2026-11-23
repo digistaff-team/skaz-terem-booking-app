@@ -11,9 +11,24 @@ const RPC_ERROR_MESSAGES: Record<string, string> = {
   SCHOOL_HOURS_BLOCKED: "Это время занято занятиями «Школы» — помещение недоступно для бронирования в часы уроков",
 };
 
+// Сетевые ошибки (fetch/abort/DNS) — общие маркеры в тексте Error
+const NETWORK_ERROR_MARKERS = [
+  "Failed to fetch",
+  "NetworkError",
+  "Network request failed",
+  "ERR_INTERNET_DISCONNECTED",
+  "ERR_CONNECTION",
+  "ENOTFOUND",
+  "ECONNREFUSED",
+  "timeout",
+];
+
 export function translateRpcError(message: string): string {
   for (const [code, text] of Object.entries(RPC_ERROR_MESSAGES)) {
     if (message.includes(code)) return text;
+  }
+  if (NETWORK_ERROR_MARKERS.some((m) => message.toLowerCase().includes(m.toLowerCase()))) {
+    return "Похоже, нет соединения с интернетом. Проверьте сеть и попробуйте ещё раз";
   }
   return message;
 }

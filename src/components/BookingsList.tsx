@@ -7,6 +7,7 @@ import { formatDateShort } from "@/lib/dates";
 import { parseEventTitle } from "@/lib/booking";
 import { getLockCode } from "@/lib/lockCodes";
 import { CalendarDays, Home, Trash2, KeyRound } from "lucide-react";
+import { showConfirm, hapticSuccess, hapticError } from "@/lib/telegram";
 
 /** Код ключницы в карточке брони: подгружается сам, при ошибке скрывается. */
 const LockCodeRow = ({ bookingId }: { bookingId: string }) => {
@@ -64,16 +65,20 @@ const BookingsList = () => {
       queryClient.invalidateQueries({ queryKey: ["monthBookings"] });
       queryClient.invalidateQueries({ queryKey: ["personalMonthBookings"] });
       queryClient.invalidateQueries({ queryKey: ["myBookingsHistory"] });
+      hapticSuccess();
       toast.success("Бронирование отменено");
     },
     onError: (err) => {
+      hapticError();
       toast.error("Ошибка при отмене: " + getErrorMessage(err));
     },
   });
 
   const cancellingId = cancelMutation.isPending ? (cancelMutation.variables as string) : null;
 
-  const handleCancel = (id: string) => {
+  const handleCancel = async (id: string) => {
+    const confirmed = await showConfirm("Отменить бронирование? Это действие необратимо.");
+    if (!confirmed) return;
     toast.info("Удаляю ваше бронирование...");
     cancelMutation.mutate(id);
   };
