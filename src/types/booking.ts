@@ -9,6 +9,8 @@ export interface Room {
   noFood: boolean;
   calendarId: string;
   icon: string;
+  /** Короткий подзаголовок для кнопки выбора помещения. */
+  shortLabel?: string;
   /** ISO-дата (YYYY-MM-DD), до которой помещение недоступно для брони (включительно). */
   unavailableUntil?: string;
   /** Причина недоступности — показывается пользователю. */

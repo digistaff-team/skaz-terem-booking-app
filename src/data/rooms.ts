@@ -17,6 +17,7 @@ export const rooms: Room[] = [
     noFood: false,
     calendarId: "703ed7ff18de1241532ad7335ce31e8c9417127d41b9aabebc06ae8bb57bbb9d@group.calendar.google.com",
     icon: "🏠",
+    shortLabel: "Зал с кухней и санузлом",
   },
   {
     id: "floor-2-hall-20",
@@ -34,6 +35,7 @@ export const rooms: Room[] = [
     noFood: true,
     calendarId: "e8a26fd5b50dfb5a41cbb87a0cb3da0dc7c14ec6011ac65998ccdbf970949e57@group.calendar.google.com",
     icon: "🎬",
+    shortLabel: "Комната-кинотеатр",
   },
   {
     id: "floor-2-room-11",
@@ -51,6 +53,7 @@ export const rooms: Room[] = [
     noFood: true,
     calendarId: "6e045dbd542076785a479a1675b03dfafa61d3818d332db8a86dab376f87ce3e@group.calendar.google.com",
     icon: "☀️",
+    shortLabel: "Средняя комната",
     unavailableUntil: "2027-05-31",
     unavailableReason: "Занято под класс Школы до 31.05.2027",
   },
@@ -70,6 +73,7 @@ export const rooms: Room[] = [
     noFood: true,
     calendarId: "4556c6057919d36b60736031d2961aa3ed7ebd7576fb046d299bcee9ef666a1f@group.calendar.google.com",
     icon: "💼",
+    shortLabel: "Комната-кабинет",
   },
   {
     id: "whole-house",
@@ -87,5 +91,6 @@ export const rooms: Room[] = [
     noFood: false,
     calendarId: "bcbf825659645aa6287146350a5a000c4208c026b9b1a29f1696bdc7bdef8f5d@group.calendar.google.com",
     icon: "🏡",
+    shortLabel: "Весь дом — оба этажа",
   },
 ];
