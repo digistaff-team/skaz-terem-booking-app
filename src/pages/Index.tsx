@@ -73,7 +73,7 @@ const Index = () => {
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Link to="/book" onClick={handleBookClick}>
               <Button size="lg" className="gap-2">
-                <CalendarDays className="h-5 w-5" /> Забронировать
+                <CalendarDays className="h-5 w-5" /> 🌟 Стать избранным
               </Button>
             </Link>
             <Link to="/schedule">
